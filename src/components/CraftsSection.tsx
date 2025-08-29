@@ -1,6 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useApp } from '@/contexts/AppContext';
+import { toast } from '@/components/ui/use-toast';
 import { 
   Palette, 
   Shirt, 
@@ -14,88 +16,52 @@ import {
   ShoppingCart
 } from 'lucide-react';
 
-const crafts = [
-  {
-    id: 1,
-    category: 'Art & Decor',
-    icon: Palette,
-    items: ['Paintings', 'Sculptures', 'Wall Art'],
-    artisan: 'Anne Wairimu',
-    rating: 4.9,
-    reviews: 78,
-    location: 'Nairobi, Westlands',
-    price: 'KSh 2,500 - KSh 15,000',
-    featured: true,
-    image: '/placeholder-craft-1.jpg'
-  },
-  {
-    id: 2,
-    category: 'Fashion & Textiles',
-    icon: Shirt,
-    items: ['Kikoy', 'Maasai Jewelry', 'Bags'],
-    artisan: 'Samuel Kiprotich',
-    rating: 4.8,
-    reviews: 134,
-    location: 'Kajiado, Maasai Land',
-    price: 'KSh 800 - KSh 5,000',
-    featured: false,
-    image: '/placeholder-craft-2.jpg'
-  },
-  {
-    id: 3,
-    category: 'Pottery & Ceramics',
-    icon: Coffee,
-    items: ['Vases', 'Dishes', 'Decorative Pots'],
-    artisan: 'Margaret Nyong\'o',
-    rating: 5.0,
-    reviews: 67,
-    location: 'Kisumu, Kibos',
-    price: 'KSh 500 - KSh 8,000',
-    featured: true,
-    image: '/placeholder-craft-3.jpg'
-  },
-  {
-    id: 4,
-    category: 'Jewelry',
-    icon: Gem,
-    items: ['Beadwork', 'Silver', 'Traditional'],
-    artisan: 'Faith Chelimo',
-    rating: 4.7,
-    reviews: 156,
-    location: 'Eldoret, Langas',
-    price: 'KSh 300 - KSh 12,000',
-    featured: false,
-    image: '/placeholder-craft-4.jpg'
-  },
-  {
-    id: 5,
-    category: 'Woodwork',
-    icon: TreePine,
-    items: ['Carvings', 'Furniture', 'Utensils'],
-    artisan: 'Joseph Muthomi',
-    rating: 4.8,
-    reviews: 92,
-    location: 'Meru, Timau',
-    price: 'KSh 1,000 - KSh 25,000',
-    featured: true,
-    image: '/placeholder-craft-5.jpg'
-  },
-  {
-    id: 6,
-    category: 'Food Products',
-    icon: Utensils,
-    items: ['Spices', 'Honey', 'Traditional Snacks'],
-    artisan: 'Elizabeth Wambui',
-    rating: 4.9,
-    reviews: 188,
-    location: 'Nyeri, Karatina',
-    price: 'KSh 200 - KSh 3,000',
-    featured: false,
-    image: '/placeholder-craft-6.jpg'
-  }
-];
+const craftIcons: { [key: string]: any } = {
+  'Art & Decor': Palette,
+  'Fashion & Textiles': Shirt,
+  'Pottery & Ceramics': Coffee,
+  'Jewelry': Gem,
+  'Woodwork': TreePine,
+  'Food Products': Utensils,
+};
 
 const CraftsSection = () => {
+  const { getFilteredCrafts, getUserById, addToCart, state, getCartItemCount } = useApp();
+  const crafts = getFilteredCrafts();
+
+  const handleAddToCart = (craftId: string) => {
+    if (!state.currentUser) {
+      toast({
+        title: "Login Required",
+        description: "Please login to add items to cart.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    addToCart(craftId, 1);
+    toast({
+      title: "Added to Cart",
+      description: "Item has been added to your cart.",
+    });
+  };
+
+  const handleToggleFavorite = (craftId: string) => {
+    if (!state.currentUser) {
+      toast({
+        title: "Login Required",
+        description: "Please login to save favorites.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Added to Favorites",
+      description: "Item saved to your favorites list.",
+    });
+  };
+
   return (
     <section id="crafts" className="py-20 bg-muted/30">
       <div className="container mx-auto px-4">
@@ -114,7 +80,9 @@ const CraftsSection = () => {
           {/* Crafts Grid */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {crafts.map((craft) => {
-              const IconComponent = craft.icon;
+              const IconComponent = craftIcons[craft.category] || Palette;
+              const artisan = getUserById(craft.artisanId);
+              
               return (
                 <Card 
                   key={craft.id} 
@@ -133,7 +101,12 @@ const CraftsSection = () => {
                       <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
                         <IconComponent className="h-6 w-6 text-accent" />
                       </div>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleToggleFavorite(craft.id)}
+                      >
                         <Heart className="h-4 w-4" />
                       </Button>
                     </div>
@@ -147,7 +120,7 @@ const CraftsSection = () => {
                     {/* Artisan Info */}
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium text-foreground">{craft.artisan}</h4>
+                        <h4 className="font-medium text-foreground">{artisan?.name}</h4>
                         <div className="flex items-center space-x-1 text-sm text-muted-foreground">
                           <MapPin className="h-3 w-3" />
                           <span>{craft.location}</span>
@@ -162,15 +135,20 @@ const CraftsSection = () => {
                       </div>
                     </div>
 
-                    {/* Price and CTA */}
+                    {/* Stock and Price */}
                     <div className="flex items-center justify-between pt-2 border-t border-border/50">
                       <div>
                         <p className="font-semibold text-foreground">{craft.price}</p>
-                        <p className="text-xs text-muted-foreground">Price range</p>
+                        <p className="text-xs text-muted-foreground">{craft.inStock} in stock</p>
                       </div>
-                      <Button variant="accent" size="sm">
+                      <Button 
+                        variant="accent" 
+                        size="sm"
+                        onClick={() => handleAddToCart(craft.id)}
+                        disabled={craft.inStock === 0}
+                      >
                         <ShoppingCart className="h-3 w-3 mr-1" />
-                        Shop
+                        Add to Cart
                       </Button>
                     </div>
                   </CardContent>

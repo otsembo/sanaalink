@@ -1,6 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useApp } from '@/contexts/AppContext';
+import { toast } from '@/components/ui/use-toast';
 import { 
   Wrench, 
   Zap, 
@@ -12,91 +14,59 @@ import {
   Shield,
   Star,
   MapPin,
-  Clock
+  Clock,
+  MessageCircle
 } from 'lucide-react';
 
-const services = [
-  {
-    id: 1,
-    category: 'Home Maintenance',
-    icon: Wrench,
-    services: ['Plumbing', 'Electrical', 'HVAC'],
-    provider: 'John Mwangi',
-    rating: 4.8,
-    reviews: 127,
-    location: 'Nairobi, Karen',
-    price: 'From KSh 1,500',
-    available: 'Available today',
-    image: '/placeholder-service-1.jpg'
-  },
-  {
-    id: 2,
-    category: 'Construction',
-    icon: Hammer,
-    services: ['Masonry', 'Carpentry', 'Welding'],
-    provider: 'Sarah Kimani',
-    rating: 4.9,
-    reviews: 89,
-    location: 'Kisumu Central',
-    price: 'From KSh 2,000',
-    available: 'Available tomorrow',
-    image: '/placeholder-service-2.jpg'
-  },
-  {
-    id: 3,
-    category: 'Automotive',
-    icon: Car,
-    services: ['Mechanics', 'Car Wash', 'Tire Repair'],
-    provider: 'Peter Ochieng',
-    rating: 4.7,
-    reviews: 156,
-    location: 'Mombasa, Nyali',
-    price: 'From KSh 800',
-    available: 'Available now',
-    image: '/placeholder-service-3.jpg'
-  },
-  {
-    id: 4,
-    category: 'Property Care',
-    icon: Home,
-    services: ['Cleaning', 'Gardening', 'Security'],
-    provider: 'Grace Wanjiku',
-    rating: 5.0,
-    reviews: 203,
-    location: 'Nakuru Town',
-    price: 'From KSh 1,200',
-    available: 'Available today',
-    image: '/placeholder-service-4.jpg'
-  },
-  {
-    id: 5,
-    category: 'Tech Services',
-    icon: Smartphone,
-    services: ['Phone Repair', 'Computer Repair', 'IT Support'],
-    provider: 'David Kiprop',
-    rating: 4.6,
-    reviews: 94,
-    location: 'Eldoret Town',
-    price: 'From KSh 500',
-    available: 'Available now',
-    image: '/placeholder-service-5.jpg'
-  },
-  {
-    id: 6,
-    category: 'Painting',
-    icon: PaintBucket,
-    services: ['Interior', 'Exterior', 'Commercial'],
-    provider: 'Mary Njeri',
-    rating: 4.8,
-    reviews: 112,
-    location: 'Thika Town',
-    price: 'From KSh 3,000',
-    available: 'Available tomorrow',
-    image: '/placeholder-service-6.jpg'
-  }
-];
+const serviceIcons: { [key: string]: any } = {
+  'Home Maintenance': Wrench,
+  'Construction': Hammer,
+  'Automotive': Car,
+  'Property Care': Home,
+  'Tech Services': Smartphone,
+  'Painting': PaintBucket,
+};
 
 const ServicesSection = () => {
+  const { getFilteredServices, getUserById, sendMessage, state } = useApp();
+  const services = getFilteredServices();
+
+  const handleBookService = (serviceId: string) => {
+    if (!state.currentUser) {
+      toast({
+        title: "Login Required",
+        description: "Please login to book a service.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    toast({
+      title: "Booking Request",
+      description: "Service booking functionality will be added soon!",
+    });
+  };
+
+  const handleContactProvider = (providerId: string) => {
+    if (!state.currentUser) {
+      toast({
+        title: "Login Required",
+        description: "Please login to contact providers.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const provider = getUserById(providerId);
+    if (provider) {
+      sendMessage(providerId, `Hi ${provider.name}, I'm interested in your services. Could you please provide more details?`);
+      toast({
+        title: "Message Sent",
+        description: `Your message has been sent to ${provider.name}.`,
+      });
+    }
+  };
+
   return (
     <section id="services" className="py-20 bg-background">
       <div className="container mx-auto px-4">
@@ -115,7 +85,9 @@ const ServicesSection = () => {
           {/* Services Grid */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {services.map((service) => {
-              const IconComponent = service.icon;
+              const IconComponent = serviceIcons[service.category] || Wrench;
+              const provider = getUserById(service.providerId);
+              
               return (
                 <Card 
                   key={service.id} 
@@ -140,7 +112,7 @@ const ServicesSection = () => {
                     {/* Provider Info */}
                     <div className="flex items-center justify-between">
                       <div>
-                        <h4 className="font-medium text-foreground">{service.provider}</h4>
+                        <h4 className="font-medium text-foreground">{provider?.name}</h4>
                         <div className="flex items-center space-x-1 text-sm text-muted-foreground">
                           <MapPin className="h-3 w-3" />
                           <span>{service.location}</span>
@@ -155,7 +127,7 @@ const ServicesSection = () => {
                       </div>
                     </div>
 
-                    {/* Price and CTA */}
+                    {/* Price and Actions */}
                     <div className="flex items-center justify-between pt-2 border-t border-border/50">
                       <div>
                         <p className="font-semibold text-foreground">{service.price}</p>
@@ -164,9 +136,22 @@ const ServicesSection = () => {
                           <span>Quick response</span>
                         </div>
                       </div>
-                      <Button variant="accent" size="sm">
-                        Book Now
-                      </Button>
+                      <div className="flex space-x-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleContactProvider(service.providerId)}
+                        >
+                          <MessageCircle className="h-3 w-3" />
+                        </Button>
+                        <Button 
+                          variant="accent" 
+                          size="sm"
+                          onClick={() => handleBookService(service.id)}
+                        >
+                          Book Now
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

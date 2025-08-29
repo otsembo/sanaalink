@@ -1,5 +1,6 @@
 import Header from '@/components/Header';
 import HeroSection from '@/components/HeroSection';
+import SearchAndFilters from '@/components/SearchAndFilters';
 import ServicesSection from '@/components/ServicesSection';
 import CraftsSection from '@/components/CraftsSection';
 import DomainChecker from '@/components/DomainChecker';
@@ -11,6 +12,7 @@ const Index = () => {
       <Header />
       <main>
         <HeroSection />
+        <SearchAndFilters />
         <ServicesSection />
         <CraftsSection />
         <DomainChecker />

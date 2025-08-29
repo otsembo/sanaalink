@@ -1,10 +1,18 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, User, Search } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useApp } from '@/contexts/AppContext';
+import LoginDialog from './LoginDialog';
+import { Menu, User, ShoppingCart, LogOut, Settings, MessageCircle, Package, Search } from 'lucide-react';
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const { state, logout, getCartItemCount } = useApp();
+  const cartItemCount = getCartItemCount();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -35,15 +43,61 @@ const Header = () => {
 
         {/* Desktop Action Buttons */}
         <div className="hidden md:flex items-center space-x-3">
-          <Button variant="ghost" size="sm">
-            <Search className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm">
-            Login
-          </Button>
-          <Button variant="hero" size="sm">
-            Join as Provider
-          </Button>
+          {state.currentUser ? (
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="sm" className="relative">
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Cart
+                {cartItemCount > 0 && (
+                  <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                    {cartItemCount}
+                  </Badge>
+                )}
+              </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarFallback className="text-xs">
+                        {state.currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="hidden md:inline">{state.currentUser.name}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Messages
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Package className="h-4 w-4 mr-2" />
+                    My Orders
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="sm" onClick={() => setShowLoginDialog(true)}>
+                <User className="h-4 w-4 mr-2" />
+                Login
+              </Button>
+              <Button variant="accent" size="sm" onClick={() => setShowLoginDialog(true)}>
+                Sign Up
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Mobile Menu */}
@@ -96,6 +150,8 @@ const Header = () => {
           </SheetContent>
         </Sheet>
       </div>
+      
+      <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
     </header>
   );
 };
