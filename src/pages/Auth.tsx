@@ -24,26 +24,31 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
    // e.preventDefault();
-    setIsLoading(true);
-    
-    const formData = new FormData(e.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-
-    const { error } = await signIn(email, password);
-    
-    if (error) {
-      toast({
+          toast({
         title: 'Sign in failed',
         description: error.message,
         variant: 'destructive',
       });
-    } else {
-      toast({
-        title: 'Welcome back!',
-        description: 'You have successfully signed in.',
-      });
-    }
+    // setIsLoading(true);
+    
+    // const formData = new FormData(e.currentTarget);
+    // const email = formData.get('email') as string;
+    // const password = formData.get('password') as string;
+
+    // const { error } = await signIn(email, password);
+    
+    // if (error) {
+    //   toast({
+    //     title: 'Sign in failed',
+    //     description: error.message,
+    //     variant: 'destructive',
+    //   });
+    // } else {
+    //   toast({
+    //     title: 'Welcome back!',
+    //     description: 'You have successfully signed in.',
+    //   });
+    // }
     
     setIsLoading(false);
   };
