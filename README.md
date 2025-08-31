@@ -1,6 +1,6 @@
 # Sanaa Link - Local Services & Crafts Platform
 
-[![Sanaa Link](https://img.shields.io/badge/Platform-Cross--Platform-blue)](https://preview--ujuzi-hub-connect.lovable.app/)
+[![Sanaa Link](https://img.shields.io/badge/Platform-Cross--Platform-blue)](https://sanaalink.me.ke/)
 [![Built for HACK-A-MILLI](https://img.shields.io/badge/Hackathon-HACK--A--MILLI-green)](https://www.hack-a-milli.kenic.or.ke/)
 [![Domain Integration](https://img.shields.io/badge/Domains-.ke%20Integration-orange)](https://kenic.or.ke/)
 
