@@ -72,17 +72,17 @@ Kenya's skilled workforce and talented artisans face significant challenges in t
 ### **Primary Users**
 
 #### **Service Providers** 
-- **Demographics:** 18-45 years, smartphone users, skilled professionals
+- **Demographics:** Smartphone users, skilled professionals
 - **Needs:** More customers, professional credibility, secure payments, digital presence
 - **Examples:** Plumbers, electricians, carpenters, mechanics, beauticians
 
 #### **Artisan Crafters**
-- **Demographics:** All ages, traditional and modern artists, smartphone access
+- **Demographics:** Traditional and modern artists, smartphone access
 - **Needs:** Online sales channels, broader market reach, fair pricing, cultural preservation
 - **Examples:** Potters, woodcarvers, jewelry makers, textile artists
 
 #### **Urban Consumers**
-- **Demographics:** Middle class, smartphone users, 25-50 years
+- **Demographics:** Middle class, smartphone users
 - **Needs:** Reliable services, authentic products, quality assurance, convenient booking
 - **Behavior:** Value quality and authenticity, willing to pay fair prices
 
