@@ -4,15 +4,19 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useApp } from '@/contexts/AppContext';
-import LoginDialog from './LoginDialog';
-import { Menu, User, ShoppingCart, LogOut, Settings, MessageCircle, Package, Search } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { Menu, User, ShoppingCart, LogOut, Settings, MessageCircle, Package, Search, Plus } from 'lucide-react';
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [showLoginDialog, setShowLoginDialog] = useState(false);
-  const { state, logout, getCartItemCount } = useApp();
-  const cartItemCount = getCartItemCount();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -43,16 +47,24 @@ const Header = () => {
 
         {/* Desktop Action Buttons */}
         <div className="hidden md:flex items-center space-x-3">
-          {state.currentUser ? (
+          {user ? (
             <div className="flex items-center space-x-2">
+              <Button
+                variant="hero"
+                size="sm"
+                onClick={() => navigate('/register-provider')}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Become Provider
+              </Button>
+              
               <Button variant="ghost" size="sm" className="relative">
                 <ShoppingCart className="h-4 w-4 mr-2" />
                 Cart
-                {cartItemCount > 0 && (
-                  <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                    {cartItemCount}
-                  </Badge>
-                )}
+                <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  0
+                </Badge>
               </Button>
               
               <DropdownMenu>
@@ -60,10 +72,10 @@ const Header = () => {
                   <Button variant="ghost" size="sm" className="flex items-center space-x-2">
                     <Avatar className="h-6 w-6">
                       <AvatarFallback className="text-xs">
-                        {state.currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        {(user.user_metadata?.name || user.email || 'U').charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="hidden md:inline">{state.currentUser.name}</span>
+                    <span className="hidden md:inline">{user.user_metadata?.name || user.email}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
@@ -80,7 +92,7 @@ const Header = () => {
                     My Orders
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout}>
+                  <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="h-4 w-4 mr-2" />
                     Logout
                   </DropdownMenuItem>
@@ -89,11 +101,21 @@ const Header = () => {
             </div>
           ) : (
             <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="sm" onClick={() => setShowLoginDialog(true)}>
+              <Button
+                variant="hero"
+                size="sm"
+                onClick={() => navigate('/register-provider')}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Become Provider
+              </Button>
+              
+              <Button variant="ghost" size="sm" onClick={() => navigate('/auth')}>
                 <User className="h-4 w-4 mr-2" />
                 Login
               </Button>
-              <Button variant="accent" size="sm" onClick={() => setShowLoginDialog(true)}>
+              <Button variant="accent" size="sm" onClick={() => navigate('/auth')}>
                 Sign Up
               </Button>
             </div>
@@ -138,20 +160,19 @@ const Header = () => {
                 About
               </a>
               <div className="flex flex-col space-y-2 mt-6">
-                <Button variant="outline">
+                <Button variant="outline" onClick={() => navigate('/auth')}>
                   <User className="h-4 w-4 mr-2" />
                   Login
                 </Button>
-                <Button variant="hero">
-                  Join as Provider
+                <Button variant="hero" onClick={() => navigate('/register-provider')}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Become Provider
                 </Button>
               </div>
             </nav>
           </SheetContent>
         </Sheet>
       </div>
-      
-      <LoginDialog open={showLoginDialog} onOpenChange={setShowLoginDialog} />
     </header>
   );
 };
