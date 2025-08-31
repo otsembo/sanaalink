@@ -23,7 +23,7 @@ const Auth = () => {
   }, [user, loading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+   // e.preventDefault();
     setIsLoading(true);
     
     const formData = new FormData(e.currentTarget);
