@@ -14,21 +14,56 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, ArrowRight, Upload, User, Building, MapPin, FileText, Image, Phone } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Upload, User, Building, MapPin, FileText, Image, Phone, Check } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
+import CategoryFilter from '@/components/ui/CategoryFilter';
 
 const providerSchema = z.object({
+  // Basic Info
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   phone: z.string().min(10, 'Phone number must be at least 10 characters'),
   whatsapp: z.string().optional(),
+  
+    // Business Details
   businessName: z.string().min(2, 'Business name must be at least 2 characters'),
-  category: z.string().min(1, 'Please select a category'),
-  subCategory: z.string().optional(),
-  location: z.string().min(2, 'Location is required'),
+  providerType: z.enum(['service', 'craft', 'both']),
+  categories: z.array(z.object({
+    categoryId: z.string(),
+    subCategoryId: z.string()
+  })),
+  
+  // Location
+  county: z.string().min(2, 'County is required'),
+  town: z.string().min(2, 'Town is required'),
+  specificArea: z.string().min(2, 'Specific area is required'),
+  
+  // Profile
   bio: z.string().min(10, 'Bio must be at least 10 characters'),
+  profileImage: z.any().optional(),
+  
+  // Portfolio
+  portfolioImages: z.array(z.any()).optional(),
+  
+  // Contact Preferences
+  preferredContactMethod: z.enum(['email', 'phone', 'whatsapp']),
+  
+  // Terms and Conditions
+  acceptTerms: z.boolean().refine((val) => val === true, {
+    message: 'You must accept the terms and conditions',
+  }),
 });
 
 type ProviderFormData = z.infer<typeof providerSchema>;
+
+interface RegistrationStepProps {
+  form: any;
+  onNext?: () => void;
+  onPrev?: () => void;
+}
 
 const categories = [
   'Home Maintenance',
@@ -57,9 +92,22 @@ const subCategories: Record<string, string[]> = {
 };
 
 const counties = [
-  'Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Thika', 'Malindi', 'Kitale', 
-  'Garissa', 'Kakamega', 'Nyeri', 'Machakos', 'Meru', 'Kericho', 'Kisii'
+  'Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Uasin Gishu', 'Kiambu', 'Machakos',
+  'Kajiado', 'Kisii', 'Nyeri', 'Kakamega', 'Kilifi', 'Bungoma', "Murang'a", 'Meru'
 ];
+
+const towns: Record<string, string[]> = {
+  'Nairobi': ['Westlands', 'Karen', 'Kilimani', 'Eastleigh', 'CBD', 'Lavington', 'Langata', 'South B', 'South C'],
+  'Mombasa': ['Nyali', 'Bamburi', 'Tudor', 'Likoni', 'Shanzu', 'Mtwapa', 'Diani'],
+  'Kisumu': ['CBD', 'Milimani', 'Kondele', 'Nyamasaria', 'Mamboleo'],
+  'Nakuru': ['CBD', 'Section 58', 'Milimani', 'London', 'Shabab'],
+  'Uasin Gishu': ['Eldoret Town', 'Langas', 'Pioneer', 'Kapsoya', 'Huruma'],
+  'Kiambu': ['Thika', 'Ruiru', 'Kikuyu', 'Limuru', 'Kiambu Town'],
+  'Machakos': ['Machakos Town', 'Athi River', 'Mlolongo', 'Masinga', 'Tala'],
+  'Kajiado': ['Ngong', 'Kitengela', 'Ongata Rongai', 'Kajiado Town', 'Kiserian'],
+  'Kisii': ['Kisii Town', 'Suneka', 'Ogembo', 'Keroka', 'Masimba'],
+  'Nyeri': ['Nyeri Town', 'Karatina', 'Othaya', 'Mweiga', 'Naro Moru'],
+};
 
 const ProviderRegistration = () => {
   const { user } = useAuth();
@@ -77,65 +125,147 @@ const ProviderRegistration = () => {
       phone: '',
       whatsapp: '',
       businessName: '',
-      category: '',
-      subCategory: '',
-      location: '',
+      providerType: undefined,
+      categories: [],
+      county: '',
+      town: '',
+      specificArea: '',
       bio: '',
+      preferredContactMethod: 'phone',
+      acceptTerms: false,
     },
   });
 
   const onSubmit = async (data: ProviderFormData) => {
-    if (!user) {
-      toast({
-        title: 'Authentication required',
-        description: 'Please sign in to register as a provider.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-
     try {
-      const { error } = await supabase
-        .from('providers')
-        .insert([
-          {
-            user_id: user.id,
-            name: data.name,
-            email: data.email,
-            phone: data.phone,
-            whatsapp: data.whatsapp,
-            business_name: data.businessName,
-            category: data.category,
-            sub_category: data.subCategory,
-            location: data.location,
-            bio: data.bio,
-          },
-        ]);
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
 
-      if (error) throw error;
+      setIsSubmitting(true);
+      
+      // Upload profile image
+      let profileUrl = null;
+      if (data.profileImage) {
+        const { data: profileData, error: profileError } = await supabase.storage
+          .from('provider-images')
+          .upload(`profile/${user.id}`, data.profileImage);
+        
+        if (profileError) throw profileError;
+        profileUrl = supabase.storage.from('provider-images').getPublicUrl(profileData.path).data.publicUrl;
+      }
+      
+      // Upload portfolio images
+      const portfolioUrls: string[] = [];
+      if (data.portfolioImages?.length) {
+        for (const file of data.portfolioImages) {
+          const { data: portfolioData, error: portfolioError } = await supabase.storage
+            .from('provider-images')
+            .upload(`portfolio/${user.id}/${file.name}`, file);
+          
+          if (portfolioError) throw portfolioError;
+          const { data: { publicUrl } } = supabase.storage
+            .from('provider-images')
+            .getPublicUrl(portfolioData.path);
+          portfolioUrls.push(publicUrl);
+        }
+      }
+
+      // Verify if user already has a provider profile
+      const { data: existingProvider } = await supabase
+        .from('providers')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (existingProvider) {
+        throw new Error('You already have a provider profile');
+      }
+      
+      // Create provider record
+      const { data: provider, error: providerError } = await supabase
+        .from('providers')
+        .insert({
+          user_id: user.id,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          whatsapp: data.whatsapp || data.phone, // Use phone as WhatsApp if not provided
+          business_name: data.businessName,
+          location: `${data.specificArea}, ${data.town}, ${data.county}`,
+          bio: data.bio,
+          profile_image: profileUrl || null,
+          category: data.providerType, // Temporary, will be moved to provider_categories
+          sub_category: '', // Required by schema until migration
+          is_verified: false, // Requires admin verification
+        })
+        .select()
+        .single();
+      
+      if (providerError) throw providerError;
+
+      // Insert provider categories
+      const { error: categoriesError } = await supabase
+        .from('provider_categories')
+        .insert(
+          data.categories.map(cat => ({
+            provider_id: provider.id,
+            category_id: cat.categoryId,
+            sub_category_id: cat.subCategoryId
+          }))
+        );
+
+      if (categoriesError) throw categoriesError;
 
       toast({
         title: 'Registration successful!',
-        description: 'Your provider profile has been created.',
+        description: 'Your provider profile has been created and is pending verification.',
       });
 
-      navigate('/provider-dashboard');
-    } catch (error: any) {
+      navigate('/provider/dashboard');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create provider profile.';
       toast({
         title: 'Registration failed',
-        description: error.message || 'Failed to create provider profile.',
+        description: errorMessage,
         variant: 'destructive',
       });
+      console.error('Provider registration error:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const nextStep = () => {
-    if (currentStep < totalSteps) {
+  // Validate current step before proceeding
+  const validateStep = async () => {
+    switch (currentStep) {
+      case 1: // Basic Info
+        return form.trigger(['name', 'email', 'phone']);
+      case 2: // Business Details
+        return form.trigger(['businessName', 'providerType', 'categories']);
+      case 3: // Location
+        return form.trigger(['county', 'town', 'specificArea']);
+      case 4: // Profile
+        return form.trigger(['bio']);
+      case 5: // Portfolio
+        return true; // Portfolio is optional
+      case 6: // Final step
+        return form.trigger(['acceptTerms', 'preferredContactMethod']);
+      default:
+        return true;
+    }
+  };
+
+  const nextStep = async () => {
+    const isValid = await validateStep();
+    if (isValid && currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
+    } else if (!isValid) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields correctly.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -242,55 +372,50 @@ const ProviderRegistration = () => {
             
             <FormField
               control={form.control}
-              name="category"
+              name="providerType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category</FormLabel>
+                  <FormLabel>Business Type</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select your service category" />
+                        <SelectValue placeholder="Select business type" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="service">Service Provider</SelectItem>
+                      <SelectItem value="craft">Craft Business</SelectItem>
+                      <SelectItem value="both">Both Services & Crafts</SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormDescription>
+                    Choose whether you offer services, crafts, or both.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            
-            {form.watch('category') && (
-              <FormField
-                control={form.control}
-                name="subCategory"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sub-category (Optional)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a sub-category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {subCategories[form.watch('category')]?.map((subCategory) => (
-                          <SelectItem key={subCategory} value={subCategory}>
-                            {subCategory}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+
+            <FormField
+              control={form.control}
+              name="categories"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Business Categories</FormLabel>
+                  <FormControl>
+                    <CategoryFilter
+                      type={form.watch('providerType')}
+                      onSelectionChange={field.onChange}
+                      defaultSelected={field.value as { categoryId: string, subCategoryId: string }[]}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Select all categories that apply to your business.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         );
 
@@ -304,10 +429,10 @@ const ProviderRegistration = () => {
             
             <FormField
               control={form.control}
-              name="location"
+              name="county"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Location</FormLabel>
+                  <FormLabel>County</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -322,6 +447,48 @@ const ProviderRegistration = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="town"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Town</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your town" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {towns[form.watch('county')]?.map((town) => (
+                        <SelectItem key={town} value={town}>
+                          {town}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="specificArea"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Specific Area</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Near Shopping Center" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Provide a specific landmark or area name for easier location
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -392,8 +559,8 @@ const ProviderRegistration = () => {
               <div className="space-y-2 text-sm text-green-700">
                 <p><strong>Name:</strong> {form.watch('name')}</p>
                 <p><strong>Business:</strong> {form.watch('businessName')}</p>
-                <p><strong>Category:</strong> {form.watch('category')}</p>
-                <p><strong>Location:</strong> {form.watch('location')}</p>
+                <p><strong>Category:</strong> {form.watch('categories').length} selected</p>
+                <p><strong>Location:</strong> {`${form.watch('specificArea')}, ${form.watch('town')}, ${form.watch('county')}`}</p>
                 <p><strong>Phone:</strong> {form.watch('phone')}</p>
               </div>
             </div>
@@ -438,7 +605,7 @@ const ProviderRegistration = () => {
                 Become a Provider
               </CardTitle>
               <CardDescription className="text-center">
-                Join Ujuzi Hub and connect with customers in your area
+                Join Sanaa Link and connect with customers in your area
               </CardDescription>
               
               <div className="mt-4">

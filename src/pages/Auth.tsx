@@ -23,32 +23,27 @@ const Auth = () => {
   }, [user, loading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
-   // e.preventDefault();
-          toast({
+   e.preventDefault();
+    setIsLoading(true);
+    
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    const { error } = await signIn(email, password);
+    
+    if (error) {
+      toast({
         title: 'Sign in failed',
         description: error.message,
         variant: 'destructive',
       });
-    // setIsLoading(true);
-    
-    // const formData = new FormData(e.currentTarget);
-    // const email = formData.get('email') as string;
-    // const password = formData.get('password') as string;
-
-    // const { error } = await signIn(email, password);
-    
-    // if (error) {
-    //   toast({
-    //     title: 'Sign in failed',
-    //     description: error.message,
-    //     variant: 'destructive',
-    //   });
-    // } else {
-    //   toast({
-    //     title: 'Welcome back!',
-    //     description: 'You have successfully signed in.',
-    //   });
-    // }
+    } else {
+      toast({
+        title: 'Welcome back!',
+        description: 'You have successfully signed in.',
+      });
+    }
     
     setIsLoading(false);
   };
@@ -103,7 +98,7 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-kenya-sunset/20 to-kenya-earth/20 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-kenya-earth">Welcome to Ujuzi Hub</CardTitle>
+          <CardTitle className="text-2xl font-bold text-kenya-earth">Welcome to Sanaa Link</CardTitle>
           <CardDescription>
             Connect with local service providers and artisans
           </CardDescription>

@@ -22,9 +22,9 @@ const Footer = () => {
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <div className="h-8 w-8 rounded-lg bg-hero-gradient flex items-center justify-center">
-                <span className="text-white font-bold text-sm">UH</span>
+                <span className="text-white font-bold text-sm">SL</span>
               </div>
-              <span className="text-xl font-bold text-foreground">Ujuzi Hub</span>
+              <span className="text-xl font-bold text-foreground">Sanaa Link</span>
             </div>
             <p className="text-sm text-muted-foreground max-w-sm">
               Connecting skilled professionals and talented artisans across Kenya with customers who value quality and authenticity.
@@ -83,11 +83,11 @@ const Footer = () => {
               </li>
               <li className="flex items-center space-x-2">
                 <Mail className="h-4 w-4 text-primary" />
-                <span>hello@ujuzihub.co.ke</span>
+                <span>info@sanaalink.me.ke</span>
               </li>
               <li className="flex items-center space-x-2">
                 <Globe className="h-4 w-4 text-primary" />
-                <span>www.ujuzihub.co.ke</span>
+                <span>www.sanaalink.me.ke</span>
               </li>
             </ul>
           </div>
@@ -98,7 +98,7 @@ const Footer = () => {
         {/* Bottom Footer */}
         <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-            <span>&copy; 2024 Ujuzi Hub. All rights reserved.</span>
+            <span>&copy; 2025 Sanaa Link. All rights reserved.</span>
             <Separator orientation="vertical" className="h-4" />
             <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>

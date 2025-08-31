@@ -106,7 +106,7 @@ const LoginDialog = ({ open, onOpenChange }: LoginDialogProps) => {
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <LogIn className="h-5 w-5 mr-2" />
-            Welcome to Ujuzi Hub
+            Welcome to Sanaa Link
           </DialogTitle>
           <DialogDescription>
             Login to your account or create a new one to get started.

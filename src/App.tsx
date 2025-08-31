@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import ProviderRegistration from "./pages/ProviderRegistration";
 import ProviderProfile from "./pages/ProviderProfile";
 import NotFound from "./pages/NotFound";
+import ProviderDashboard from "./pages/ProviderDashboard";
 
 const queryClient = new QueryClient();
 
@@ -23,7 +24,10 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/register-provider" element={<ProviderRegistration />} />
-            <Route path="/provider/:id" element={<ProviderProfile />} />
+            <Route path="/provider">
+              <Route path=":id" element={<ProviderProfile />} />
+              <Route path="dashboard/*" element={<ProviderDashboard />} />
+            </Route>
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
