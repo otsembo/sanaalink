@@ -2,7 +2,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useApp } from '@/contexts/AppContext';
+import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
+import { dummyCrafts, dummyProviders } from '@/lib/dummy-data';
 import { 
   Palette, 
   Shirt, 
@@ -26,8 +28,19 @@ const craftIcons: { [key: string]: any } = {
 };
 
 const CraftsSection = () => {
+  const navigate = useNavigate();
   const { getFilteredCrafts, getUserById, addToCart, state, getCartItemCount } = useApp();
-  const crafts = getFilteredCrafts();
+  const actualCrafts = getFilteredCrafts();
+  // Use dummy data if actual crafts are empty
+  const crafts = actualCrafts.length > 0 ? actualCrafts : dummyCrafts;
+  
+  // If using dummy data, override getUserById
+  const getProvider = (id: string) => {
+    if (actualCrafts.length > 0) {
+      return getUserById(id);
+    }
+    return dummyProviders[id];
+  };
 
   const handleAddToCart = (craftId: string) => {
     if (!state.currentUser) {
@@ -159,7 +172,7 @@ const CraftsSection = () => {
 
           {/* CTA */}
           <div className="text-center mt-12">
-            <Button variant="hero" size="lg">
+            <Button variant="hero" size="lg" onClick={() => navigate('/crafts')}>
               Explore All Crafts
             </Button>
           </div>

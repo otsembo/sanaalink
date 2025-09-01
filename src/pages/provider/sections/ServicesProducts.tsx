@@ -54,7 +54,7 @@ export default function ServicesProducts({ provider }: ServicesProductsProps) {
     stock: '', // for products
     category: provider.category,
     subCategory: provider.sub_category || '',
-    images: [] as File[],
+    images: [] as File[], // Optional
     isAvailable: true,
   });
 
@@ -100,20 +100,20 @@ export default function ServicesProducts({ provider }: ServicesProductsProps) {
         uploadedImages = await handleImageUpload(formData.images, tempId, type);
       }
 
-      const itemData = {
+      const itemData: any = {
         provider_id: provider.id,
         title: formData.name,
         description: formData.description,
         price,
         category: formData.category,
-        images: uploadedImages.length > 0 ? uploadedImages : undefined,
+        ...(uploadedImages.length > 0 ? { images: uploadedImages } : {}),
         ...(type === 'service' 
           ? { 
-              duration: parseInt(formData.duration) || undefined,
+              duration: formData.duration ? parseInt(formData.duration) : undefined,
               availability: formData.isAvailable ? 'available' : 'unavailable'
             }
           : { 
-              stock_quantity: parseInt(formData.stock) || 0
+              stock_quantity: formData.stock ? parseInt(formData.stock) : 0
             }
         ),
       };
@@ -133,7 +133,7 @@ export default function ServicesProducts({ provider }: ServicesProductsProps) {
         });
       } else {
         // Create new item
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from(type === 'service' ? 'services' : 'products')
           .insert([itemData]);
 
@@ -148,9 +148,10 @@ export default function ServicesProducts({ provider }: ServicesProductsProps) {
       resetForm();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An error occurred';
+      console.error('Error submitting form:', error);
       toast({
         title: 'Error',
-        description: message,
+        description: `${error}`,
         variant: 'destructive',
       });
     } finally {

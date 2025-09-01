@@ -2,7 +2,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useApp } from '@/contexts/AppContext';
+import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
+import { dummyServices, dummyProviders } from '@/lib/dummy-data';
 import { 
   Wrench, 
   Zap, 
@@ -28,8 +30,19 @@ const serviceIcons: { [key: string]: any } = {
 };
 
 const ServicesSection = () => {
+  const navigate = useNavigate();
   const { getFilteredServices, getUserById, sendMessage, state } = useApp();
-  const services = getFilteredServices();
+  const actualServices = getFilteredServices();
+  // Use dummy data if actual services are empty
+  const services = actualServices.length > 0 ? actualServices : dummyServices;
+  
+  // If using dummy data, override getUserById
+  const getProvider = (id: string) => {
+    if (actualServices.length > 0) {
+      return getUserById(id);
+    }
+    return dummyProviders[id];
+  };
 
   const handleBookService = (serviceId: string) => {
     if (!state.currentUser) {
@@ -86,7 +99,7 @@ const ServicesSection = () => {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {services.map((service) => {
               const IconComponent = serviceIcons[service.category] || Wrench;
-              const provider = getUserById(service.providerId);
+              const provider = getProvider(service.providerId);
               
               return (
                 <Card 
@@ -161,7 +174,7 @@ const ServicesSection = () => {
 
           {/* CTA */}
           <div className="text-center mt-12">
-            <Button variant="hero" size="lg">
+            <Button variant="hero" size="lg" onClick={() => navigate('/services')}>
               View All Services
             </Button>
           </div>

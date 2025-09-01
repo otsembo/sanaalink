@@ -6,12 +6,14 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useProviderStatus } from '@/hooks/use-provider-status';
 import { Menu, User, ShoppingCart, LogOut, Settings, MessageCircle, Package, Search, Plus } from 'lucide-react';
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { isProvider } = useProviderStatus(user?.id);
 
   const handleSignOut = async () => {
     await signOut();
@@ -91,6 +93,12 @@ const Header = () => {
                     <Package className="h-4 w-4 mr-2" />
                     My Orders
                   </DropdownMenuItem>
+                  {isProvider && (
+                    <DropdownMenuItem onClick={() => navigate('/provider/dashboard')}>
+                      <Package className="h-4 w-4 mr-2" />
+                      Provider Dashboard
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
                     <LogOut className="h-4 w-4 mr-2" />
@@ -165,14 +173,43 @@ Create category filters on the main page and ensure providers can select multipl
                 About
               </a>
               <div className="flex flex-col space-y-2 mt-6">
-                <Button variant="outline" onClick={() => navigate('/auth')}>
-                  <User className="h-4 w-4 mr-2" />
-                  Login
-                </Button>
-                <Button variant="hero" onClick={() => navigate('/register-provider')}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Become Provider
-                </Button>
+                {user ? (
+                  <>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>
+                          {(user.user_metadata?.name || user.email || 'U').charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{user.user_metadata?.name || user.email}</span>
+                    </div>
+                    <Button variant="outline" onClick={() => navigate('/orders')}>
+                      <Package className="h-4 w-4 mr-2" />
+                      My Orders
+                    </Button>
+                    {isProvider && (
+                      <Button variant="outline" onClick={() => navigate('/provider/dashboard')}>
+                        <Package className="h-4 w-4 mr-2" />
+                        Provider Dashboard
+                      </Button>
+                    )}
+                    <Button variant="destructive" onClick={handleSignOut}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" onClick={() => navigate('/auth')}>
+                      <User className="h-4 w-4 mr-2" />
+                      Login
+                    </Button>
+                    <Button variant="hero" onClick={() => navigate('/register-provider')}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Become Provider
+                    </Button>
+                  </>
+                )}
               </div>
             </nav>
           </SheetContent>

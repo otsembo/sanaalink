@@ -10,6 +10,8 @@ import ProviderRegistration from "./pages/ProviderRegistration";
 import ProviderProfile from "./pages/ProviderProfile";
 import NotFound from "./pages/NotFound";
 import ProviderDashboard from "./pages/ProviderDashboard";
+import CraftsGallery from "./pages/CraftsGallery";
+import ServicesGallery from "./pages/ServicesGallery";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +30,8 @@ const App = () => (
               <Route path=":id" element={<ProviderProfile />} />
               <Route path="dashboard/*" element={<ProviderDashboard />} />
             </Route>
+            <Route path="/crafts" element={<CraftsGallery />} />
+            <Route path="/services" element={<ServicesGallery />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
