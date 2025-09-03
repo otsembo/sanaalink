@@ -1,8 +1,11 @@
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Search, Hammer, Palette, Globe } from 'lucide-react';
-import heroImage from '@/assets/hero-image.jpg';
+import { Search, Hammer, Palette, Globe, Download } from 'lucide-react'; // Added Download
+import heroImage from '../assets/hero-image.jpg'; // Ensure you have an appropriate image
 
 const HeroSection = () => {
+  const apkDownloadLink = "https://drive.google.com/uc?export=download&id=1W135b_Oeuz4-lmcOD_mukrIRGlaWvUkP";
+
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-gradient-to-br from-background via-muted/30 to-secondary/20">
       {/* Background Image with Overlay */}
@@ -49,6 +52,18 @@ const HeroSection = () => {
               <Hammer className="h-5 w-5 mr-2" />
               Join as Provider
             </Button>
+            {/* New Download APK Button */}
+            <a
+              href={apkDownloadLink}
+              target="_blank" // Opens the link in a new tab
+              rel="noopener noreferrer" // Security best practice for target="_blank"
+              className="w-full sm:w-auto"
+            >
+              <Button variant="outline" size="xl" className="w-full">
+                <Download className="h-5 w-5 mr-2" />
+                Download our Android App
+              </Button>
+            </a>
           </div>
 
           {/* Feature Icons */}
