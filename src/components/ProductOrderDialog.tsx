@@ -147,7 +147,7 @@ export default function ProductOrderDialog({ isOpen, onClose, product, provider 
                 // Update order payment status and reduce stock
                 const { error: updateError } = await supabase
                   .from('orders')
-                  .update({ payment_status: 'completed', status: 'confirmed' })
+                  .update({ status: 'confirmed' })
                   .eq('id', orderData.id);
 
                 if (updateError) {

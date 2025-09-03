@@ -2,11 +2,28 @@ import type { Database } from '@/integrations/supabase/types';
 
 export type DatabaseProvider = Database['public']['Tables']['providers']['Row'];
 
-export interface Provider extends DatabaseProvider {
-  portfolio_images?: string[];
+export interface Provider {
+  id: string;
+  user_id: string | null;
+  name: string;
+  email: string;
+  phone: string;
+  whatsapp: string | null;
+  business_name: string;
+  category: string;
+  sub_category: string | null;
+  location: string;
+  bio: string;
+  profile_image: string | null;
+  portfolio_images: string[];
   preferred_contact: 'email' | 'phone' | 'whatsapp';
-  average_rating?: number;
-  total_reviews?: number;
+  is_verified: boolean;
+  domain_name: string | null;
+  domain_verification_token: string | null;
+  created_at: string;
+  updated_at: string | null;
+  average_rating: number;
+  total_reviews: number;
 }
 
 export interface Service {
@@ -18,7 +35,7 @@ export interface Service {
   duration?: number;
   category: string;
   images?: string[];
-  availability: string | null;
+  availability: string;
   created_at: string;
   updated_at: string;
 }
@@ -95,40 +112,9 @@ export interface Booking {
   provider_id: string;
   customer_id: string;
   service_id: string;
-  booking_date: string; // Combined date and time
+  booking_date: string;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   total_amount: number;
   payment_status: 'pending' | 'completed' | 'failed';
-  notes: string;
-}
-
-export interface Order {
-  id: string;
-  provider_id: string;
-  customer_id: string;
-  product_id: string;
-  quantity: number;
-  delivery_address: string;
-  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
-  total_amount: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Review {
-  id: string;
-  provider_id: string;
-  customer_id: string;
-  rating: number;
-  comment?: string;
-  created_at: string;
-}
-
-export interface AvailabilitySchedule {
-  id: string;
-  provider_id: string;
-  day_of_week: 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Sunday, 6 = Saturday
-  start_time: string;
-  end_time: string;
-  is_available: boolean;
+  notes?: string;
 }

@@ -36,91 +36,19 @@ export default function BookingDialog({ isOpen, onClose, service, provider }: Bo
   const [timeSlot, setTimeSlot] = useState('');
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
 
-  // Fetch available time slots when date changes
+  // Generate available time slots (simplified for now)
   useEffect(() => {
-    if (date && provider) {
-      fetchAvailableSlots();
-    }
-  }, [date, provider]);
-
-  const fetchAvailableSlots = async () => {
-    if (!date) return;
-
-    try {
-      const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-      
-      // Get provider's availability for the selected day
-      const { data: availabilityData, error: availabilityError } = await supabase
-        .from('availability_settings')
-        .select('*')
-        .eq('provider_id', provider.id)
-        .eq('weekday', dayName)
-        .eq('is_available', true)
-        .single();
-
-      if (availabilityError || !availabilityData) {
-        setAvailableSlots([]);
-        return;
-      }
-
-      // Get existing bookings for the selected date
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from('bookings')
-        .select('booking_date')
-        .eq('provider_id', provider.id)
-        .eq('service_id', service.id)
-        .gte('booking_date', date.toISOString().split('T')[0])
-        .lt('booking_date', new Date(date.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-
-      if (bookingsError) {
-        console.error('Error fetching bookings:', bookingsError);
-      }
-
-      // Generate time slots based on availability
-      const slots = generateTimeSlots(
-        availabilityData.start_time,
-        availabilityData.end_time,
-        service.duration || 60,
-        bookingsData || []
-      );
-
-      setAvailableSlots(slots);
-      setTimeSlot(''); // Reset selected time slot
-    } catch (error) {
-      console.error('Error fetching available slots:', error);
-      setAvailableSlots([]);
-    }
-  };
-
-  const generateTimeSlots = (
-    startTime: string,
-    endTime: string,
-    duration: number,
-    existingBookings: any[]
-  ) => {
-    const slots: string[] = [];
-    const start = new Date(`2000-01-01T${startTime}`);
-    const end = new Date(`2000-01-01T${endTime}`);
-    
-    const current = new Date(start);
-    while (current.getTime() + duration * 60000 <= end.getTime()) {
-      const timeString = current.toTimeString().slice(0, 5);
-      
-      // Check if this slot is already booked
-      const isBooked = existingBookings.some(booking => {
-        const bookingTime = new Date(booking.booking_date).toTimeString().slice(0, 5);
-        return bookingTime === timeString;
-      });
-
-      if (!isBooked) {
+    if (date) {
+      // Generate default time slots (9 AM to 5 PM, 1-hour intervals)
+      const slots = [];
+      for (let hour = 9; hour < 17; hour++) {
+        const timeString = `${hour.toString().padStart(2, '0')}:00`;
         slots.push(timeString);
       }
-
-      current.setMinutes(current.getMinutes() + duration);
+      setAvailableSlots(slots);
+      setTimeSlot(''); // Reset selected time slot
     }
-
-    return slots;
-  };
+  }, [date]);
 
   const handleBookService = async () => {
     if (!state.currentUser) {
@@ -267,37 +195,6 @@ export default function BookingDialog({ isOpen, onClose, service, provider }: Bo
           description: "Please check your phone to complete the payment.",
         });
         onClose();
-
-        // Listen for payment status updates
-        const subscription = supabase
-          .channel('payment-status')
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'payments',
-              filter: `id=eq.${paymentData.id}`,
-            },
-            async (payload) => {
-              const payment = payload.new as { status: 'pending' | 'completed' | 'failed' };
-              if (payment.status === 'completed') {
-                toast({
-                  title: "Payment Successful",
-                  description: "Your booking has been confirmed.",
-                });
-                subscription.unsubscribe();
-              } else if (payment.status === 'failed') {
-                toast({
-                  title: "Payment Failed",
-                  description: "Please try again or contact support.",
-                  variant: "destructive",
-                });
-                subscription.unsubscribe();
-              }
-            }
-          )
-          .subscribe();
       } else {
         throw new Error(response.ResponseDescription);
       }

@@ -49,7 +49,13 @@ export default function ProviderDashboard() {
           return;
         }
 
-        setProvider(data);
+      setProvider({
+        ...data,
+        preferred_contact: data.preferred_contact || 'phone',
+        portfolio_images: [],
+        average_rating: 0,
+        total_reviews: 0
+      });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load provider data';
         setError(message);

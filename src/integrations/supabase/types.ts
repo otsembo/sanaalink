@@ -14,109 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
-      payments: {
+      availability_settings: {
         Row: {
+          created_at: string | null
+          end_time: string
           id: string
-          created_at: string
+          is_available: boolean | null
+          provider_id: string | null
+          start_time: string
           updated_at: string | null
-          booking_id: string
-          amount: number
-          status: 'pending' | 'completed' | 'failed'
-          provider_id: string
-          customer_id: string
-          payment_method: string
-          transaction_id: string | null
-          transaction_ref: string | null
+          weekday: string
         }
         Insert: {
+          created_at?: string | null
+          end_time: string
           id?: string
-          created_at?: string
+          is_available?: boolean | null
+          provider_id?: string | null
+          start_time: string
           updated_at?: string | null
-          booking_id: string
-          amount: number
-          status?: 'pending' | 'completed' | 'failed'
-          provider_id: string
-          customer_id: string
-          payment_method?: string
-          transaction_id?: string | null
-          transaction_ref?: string | null
+          weekday: string
         }
         Update: {
+          created_at?: string | null
+          end_time?: string
           id?: string
-          created_at?: string
+          is_available?: boolean | null
+          provider_id?: string | null
+          start_time?: string
           updated_at?: string | null
-          booking_id?: string
-          amount?: number
-          status?: 'pending' | 'completed' | 'failed'
-          provider_id?: string
-          customer_id?: string
-          payment_method?: string
-          transaction_id?: string | null
-          transaction_ref?: string | null
+          weekday?: string
         }
         Relationships: [
           {
-            foreignKeyName: "payments_booking_id_fkey"
-            columns: ["booking_id"]
-            isOneToOne: false
-            referencedRelation: "bookings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_provider_id_fkey"
+            foreignKeyName: "availability_settings_provider_id_fkey"
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "providers"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "payments_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
         ]
-      },
+      }
       bookings: {
         Row: {
           booking_date: string
-          created_at: string
-          customer_id: string
+          created_at: string | null
+          customer_id: string | null
           id: string
           notes: string | null
-          provider_id: string
-          service_id: string
+          payment_status: string
+          provider_id: string | null
+          service_id: string | null
           status: string
-          payment_status: 'pending' | 'completed' | 'failed'
           total_amount: number
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           booking_date: string
-          created_at?: string
-          customer_id: string
+          created_at?: string | null
+          customer_id?: string | null
           id?: string
           notes?: string | null
-          provider_id: string
-          service_id: string
-          status?: string
-          payment_status?: 'pending' | 'completed' | 'failed'
+          payment_status: string
+          provider_id?: string | null
+          service_id?: string | null
+          status: string
           total_amount: number
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           booking_date?: string
-          created_at?: string
-          customer_id?: string
+          created_at?: string | null
+          customer_id?: string | null
           id?: string
           notes?: string | null
-          provider_id?: string
-          service_id?: string
+          payment_status?: string
+          provider_id?: string | null
+          service_id?: string | null
           status?: string
-          payment_status?: 'pending' | 'completed' | 'failed'
           total_amount?: number
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -135,42 +112,92 @@ export type Database = {
           },
         ]
       }
-      orders: {
+      domain_configs: {
         Row: {
-          created_at: string
-          customer_id: string
-          delivery_address: string
+          created_at: string | null
+          domain_name: string
+          expires_at: string | null
           id: string
-          product_id: string
-          provider_id: string
-          quantity: number
-          status: string
-          total_amount: number
-          updated_at: string
+          is_verified: boolean | null
+          provider_id: string | null
+          updated_at: string | null
+          verification_token: string | null
         }
         Insert: {
-          created_at?: string
-          customer_id: string
-          delivery_address: string
+          created_at?: string | null
+          domain_name: string
+          expires_at?: string | null
           id?: string
-          product_id: string
-          provider_id: string
-          quantity?: number
-          status?: string
-          total_amount: number
-          updated_at?: string
+          is_verified?: boolean | null
+          provider_id?: string | null
+          updated_at?: string | null
+          verification_token?: string | null
         }
         Update: {
-          created_at?: string
-          customer_id?: string
-          delivery_address?: string
+          created_at?: string | null
+          domain_name?: string
+          expires_at?: string | null
           id?: string
-          product_id?: string
-          provider_id?: string
+          is_verified?: boolean | null
+          provider_id?: string | null
+          updated_at?: string | null
+          verification_token?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "domain_configs_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          id: string
+          notes: string | null
+          payment_status: string
+          product_id: string | null
+          provider_id: string | null
+          quantity: number
+          shipping_address: string
+          status: string
+          total_amount: number
+          tracking_number: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          notes?: string | null
+          payment_status: string
+          product_id?: string | null
+          provider_id?: string | null
+          quantity: number
+          shipping_address: string
+          status: string
+          total_amount: number
+          tracking_number?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          notes?: string | null
+          payment_status?: string
+          product_id?: string | null
+          provider_id?: string | null
           quantity?: number
+          shipping_address?: string
           status?: string
           total_amount?: number
-          updated_at?: string
+          tracking_number?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -189,42 +216,105 @@ export type Database = {
           },
         ]
       }
+      payments: {
+        Row: {
+          amount: number
+          booking_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          payment_method: string
+          provider_id: string
+          status: string
+          transaction_id: string | null
+          transaction_ref: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          payment_method?: string
+          provider_id: string
+          status?: string
+          transaction_id?: string | null
+          transaction_ref?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          payment_method?: string
+          provider_id?: string
+          status?: string
+          transaction_id?: string | null
+          transaction_ref?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string
-          created_at: string
+          created_at: string | null
           description: string
           id: string
           images: string[] | null
+          is_available: boolean | null
           price: number
-          provider_id: string
+          provider_id: string | null
           stock_quantity: number
+          sub_category: string | null
           title: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           category: string
-          created_at?: string
+          created_at?: string | null
           description: string
           id?: string
           images?: string[] | null
+          is_available?: boolean | null
           price: number
-          provider_id: string
+          provider_id?: string | null
           stock_quantity?: number
+          sub_category?: string | null
           title: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           category?: string
-          created_at?: string
+          created_at?: string | null
           description?: string
           id?: string
           images?: string[] | null
+          is_available?: boolean | null
           price?: number
-          provider_id?: string
+          provider_id?: string | null
           stock_quantity?: number
+          sub_category?: string | null
           title?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -239,125 +329,144 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
-          created_at: string
-          email: string
+          created_at: string | null
           id: string
-          location: string | null
-          name: string
-          phone: string | null
-          updated_at: string
-          user_id: string
-          whatsapp: string | null
+          name: string | null
+          updated_at: string | null
         }
         Insert: {
           avatar_url?: string | null
-          created_at?: string
-          email: string
-          id?: string
-          location?: string | null
-          name: string
-          phone?: string | null
-          updated_at?: string
-          user_id: string
-          whatsapp?: string | null
+          created_at?: string | null
+          id: string
+          name?: string | null
+          updated_at?: string | null
         }
         Update: {
           avatar_url?: string | null
-          created_at?: string
-          email?: string
+          created_at?: string | null
           id?: string
-          location?: string | null
-          name?: string
-          phone?: string | null
-          updated_at?: string
-          user_id?: string
-          whatsapp?: string | null
+          name?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
       providers: {
         Row: {
-          bio: string | null
+          bio: string
           business_name: string
           category: string
-          created_at: string
+          created_at: string | null
           domain_name: string | null
+          domain_verification_token: string | null
           email: string
           id: string
           is_verified: boolean | null
           location: string
           name: string
           phone: string
+          portfolio_images: string[] | null
+          preferred_contact: string
           profile_image: string | null
           sub_category: string | null
-          updated_at: string
-          user_id: string
+          updated_at: string | null
+          user_id: string | null
           whatsapp: string | null
         }
         Insert: {
-          bio?: string | null
+          bio: string
           business_name: string
           category: string
-          created_at?: string
+          created_at?: string | null
           domain_name?: string | null
+          domain_verification_token?: string | null
           email: string
           id?: string
           is_verified?: boolean | null
           location: string
           name: string
           phone: string
+          portfolio_images?: string[] | null
+          preferred_contact: string
           profile_image?: string | null
           sub_category?: string | null
-          updated_at?: string
-          user_id: string
+          updated_at?: string | null
+          user_id?: string | null
           whatsapp?: string | null
         }
         Update: {
-          bio?: string | null
+          bio?: string
           business_name?: string
           category?: string
-          created_at?: string
+          created_at?: string | null
           domain_name?: string | null
+          domain_verification_token?: string | null
           email?: string
           id?: string
           is_verified?: boolean | null
           location?: string
           name?: string
           phone?: string
+          portfolio_images?: string[] | null
+          preferred_contact?: string
           profile_image?: string | null
           sub_category?: string | null
-          updated_at?: string
-          user_id?: string
+          updated_at?: string | null
+          user_id?: string | null
           whatsapp?: string | null
         }
         Relationships: []
       }
       reviews: {
         Row: {
-          comment: string | null
-          created_at: string
-          customer_id: string
+          comment: string
+          created_at: string | null
+          customer_id: string | null
           id: string
-          provider_id: string
+          images: string[] | null
+          product_id: string | null
+          provider_id: string | null
           rating: number
+          response: string | null
+          response_at: string | null
+          service_id: string | null
+          updated_at: string | null
         }
         Insert: {
-          comment?: string | null
-          created_at?: string
-          customer_id: string
+          comment: string
+          created_at?: string | null
+          customer_id?: string | null
           id?: string
-          provider_id: string
+          images?: string[] | null
+          product_id?: string | null
+          provider_id?: string | null
           rating: number
+          response?: string | null
+          response_at?: string | null
+          service_id?: string | null
+          updated_at?: string | null
         }
         Update: {
-          comment?: string | null
-          created_at?: string
-          customer_id?: string
+          comment?: string
+          created_at?: string | null
+          customer_id?: string | null
           id?: string
-          provider_id?: string
+          images?: string[] | null
+          product_id?: string | null
+          provider_id?: string | null
           rating?: number
+          response?: string | null
+          response_at?: string | null
+          service_id?: string | null
+          updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "reviews_provider_id_fkey"
             columns: ["provider_id"]
@@ -365,44 +474,60 @@ export type Database = {
             referencedRelation: "providers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "reviews_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
         ]
       }
       services: {
         Row: {
-          availability: string | null
-          created_at: string
+          availability: Json | null
+          category: string
+          created_at: string | null
           description: string
           duration: number | null
           id: string
           images: string[] | null
+          is_available: boolean | null
           price: number
-          provider_id: string
+          provider_id: string | null
+          sub_category: string | null
           title: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          availability?: string | null
-          created_at?: string
+          availability?: Json | null
+          category: string
+          created_at?: string | null
           description: string
           duration?: number | null
           id?: string
           images?: string[] | null
+          is_available?: boolean | null
           price: number
-          provider_id: string
+          provider_id?: string | null
+          sub_category?: string | null
           title: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          availability?: string | null
-          created_at?: string
+          availability?: Json | null
+          category?: string
+          created_at?: string | null
           description?: string
           duration?: number | null
           id?: string
           images?: string[] | null
+          is_available?: boolean | null
           price?: number
-          provider_id?: string
+          provider_id?: string | null
+          sub_category?: string | null
           title?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -419,7 +544,78 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      can_modify_provider: {
+        Args: { target_provider_id: string }
+        Returns: boolean
+      }
+      get_provider_by_user_id: {
+        Args: { lookup_user_id: string }
+        Returns: {
+          bio: string
+          business_name: string
+          category: string
+          created_at: string | null
+          domain_name: string | null
+          domain_verification_token: string | null
+          email: string
+          id: string
+          is_verified: boolean | null
+          location: string
+          name: string
+          phone: string
+          portfolio_images: string[] | null
+          preferred_contact: string
+          profile_image: string | null
+          sub_category: string | null
+          updated_at: string | null
+          user_id: string | null
+          whatsapp: string | null
+        }[]
+      }
+      get_user_bookings: {
+        Args: { lookup_user_id: string }
+        Returns: {
+          booking_date: string
+          created_at: string | null
+          customer_id: string | null
+          id: string
+          notes: string | null
+          payment_status: string
+          provider_id: string | null
+          service_id: string | null
+          status: string
+          total_amount: number
+          updated_at: string | null
+        }[]
+      }
+      insert_provider: {
+        Args: { provider_data: Json }
+        Returns: {
+          bio: string
+          business_name: string
+          category: string
+          created_at: string | null
+          domain_name: string | null
+          domain_verification_token: string | null
+          email: string
+          id: string
+          is_verified: boolean | null
+          location: string
+          name: string
+          phone: string
+          portfolio_images: string[] | null
+          preferred_contact: string
+          profile_image: string | null
+          sub_category: string | null
+          updated_at: string | null
+          user_id: string | null
+          whatsapp: string | null
+        }
+      }
+      is_provider: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

@@ -84,7 +84,8 @@ const ServicesSection = () => {
         // Map services to match our Service type
         const mappedServices: Service[] = servicesData.map(service => ({
           ...service,
-          category: providers[service.provider_id]?.category || 'Professional'
+          category: providersMap[service.provider_id]?.category || 'Professional',
+          availability: 'Available'
         }));
 
         setProviders(providersMap);
