@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { Search, Grid2X2, List, Package, Star, MapPin, ShoppingCart, Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useApp } from '@/contexts/AppContext';
+import ProductOrderDialog from '@/components/ProductOrderDialog';
 import type { Provider, Product } from '@/types/provider';
 
 const sortOptions = [
@@ -27,6 +29,7 @@ const categoryOptions = [
 ];
 
 const ProductsGallery = () => {
+  const { state } = useApp();
   const [products, setProducts] = useState<Product[]>([]);
   const [providers, setProviders] = useState<{ [key: string]: Provider }>({});
   const [loading, setLoading] = useState(true);
@@ -34,6 +37,8 @@ const ProductsGallery = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState('All Categories');
   const [sortBy, setSortBy] = useState('created_at:desc');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Fetch providers and products
@@ -112,21 +117,18 @@ const ProductsGallery = () => {
     setSortBy(value);
   };
 
-  const handleAddToCart = (productId: string) => {
-    if (!products || !providers) {
+  const handleOrderProduct = (product: Product) => {
+    if (!state.currentUser) {
       toast({
-        title: 'Error',
-        description: 'Unable to add to cart. Please try again.',
-        variant: 'destructive',
+        title: "Login Required",
+        description: "Please login to order products.",
+        variant: "destructive",
       });
       return;
     }
 
-    // TODO: Implement cart functionality
-    toast({
-      title: 'Added to Cart',
-      description: 'Item has been added to your cart.',
-    });
+    setSelectedProduct(product);
+    setIsOrderDialogOpen(true);
   };
 
   const handleToggleFavorite = (productId: string) => {
@@ -333,11 +335,11 @@ const ProductsGallery = () => {
                           <Button
                             variant="accent"
                             className="flex-1"
-                            onClick={() => handleAddToCart(product.id)}
+                            onClick={() => handleOrderProduct(product)}
                             disabled={product.stock_quantity === 0}
                           >
                             <ShoppingCart className="h-4 w-4 mr-2" />
-                            Add to Cart
+                            Order Now
                           </Button>
                           <Button
                             variant="ghost"

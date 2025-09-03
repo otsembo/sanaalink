@@ -206,7 +206,8 @@ export default function DomainConfiguration({ provider }: DomainConfigurationPro
               </div>
             )}
           </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+         </Card>
+       )}
+     </div>
+   );
+}

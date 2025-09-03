@@ -25,6 +25,7 @@ import {
   MessageCircle,
   PackageOpen
 } from 'lucide-react';
+import { BookingButton } from '@/components/ui/booking-button';
 
 const serviceIcons: { [key: string]: typeof Wrench } = {
   'Home Maintenance': Wrench,
@@ -103,21 +104,6 @@ const ServicesSection = () => {
     fetchServices();
   }, [toast]);
 
-  const handleBookService = (serviceId: string) => {
-    if (!state.currentUser) {
-      toast({
-        title: "Login Required",
-        description: "Please login to book a service.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    toast({
-      title: "Booking Request",
-      description: "Service booking functionality will be added soon!",
-    });
-  };
 
   const handleContactProvider = (providerId: string) => {
     if (!state.currentUser) {
@@ -255,13 +241,12 @@ const ServicesSection = () => {
                           >
                             <MessageCircle className="h-3 w-3" />
                           </Button>
-                          <Button 
+                          <BookingButton 
+                            service={service}
+                            provider={provider}
                             variant="accent" 
                             size="sm"
-                            onClick={() => handleBookService(service.id)}
-                          >
-                            Book Now
-                          </Button>
+                          />
                         </div>
                       </div>
                     </CardContent>

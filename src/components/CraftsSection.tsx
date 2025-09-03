@@ -21,6 +21,7 @@ import {
   ShoppingCart,
   Package
 } from 'lucide-react';
+import ProductOrderDialog from './ProductOrderDialog';
 
 const craftIcons: { [key: string]: typeof Palette } = {
   'Art & Decor': Palette,
@@ -38,6 +39,8 @@ const CraftsSection = () => {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [providers, setProviders] = useState<{ [key: string]: Provider }>({});
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   
   useEffect(() => {
     const fetchProducts = async () => {
@@ -92,21 +95,18 @@ const CraftsSection = () => {
     fetchProducts();
   }, [toast]);
 
-  const handleAddToCart = (productId: string) => {
+  const handleOrderProduct = (product: Product) => {
     if (!state.currentUser) {
       toast({
         title: "Login Required",
-        description: "Please login to add items to cart.",
+        description: "Please login to order products.",
         variant: "destructive",
       });
       return;
     }
 
-    // TODO: Implement cart functionality
-    toast({
-      title: "Added to Cart",
-      description: "Item has been added to your cart.",
-    });
+    setSelectedProduct(product);
+    setIsOrderDialogOpen(true);
   };
 
   const handleToggleFavorite = (productId: string) => {
@@ -239,11 +239,11 @@ const CraftsSection = () => {
                         <Button 
                           variant="accent" 
                           size="sm"
-                          onClick={() => handleAddToCart(product.id)}
+                          onClick={() => handleOrderProduct(product)}
                           disabled={product.stock_quantity === 0}
                         >
                           <ShoppingCart className="h-3 w-3 mr-1" />
-                          Add to Cart
+                          Order Now
                         </Button>
                       </div>
                     </CardContent>
@@ -261,6 +261,19 @@ const CraftsSection = () => {
           </div>
         </div>
         </div>
+
+        {/* Order Dialog */}
+        {selectedProduct && (
+          <ProductOrderDialog
+            isOpen={isOrderDialogOpen}
+            onClose={() => {
+              setIsOrderDialogOpen(false);
+              setSelectedProduct(null);
+            }}
+            product={selectedProduct}
+            provider={providers[selectedProduct.provider_id]}
+          />
+        )}
     </section>
   );
 };
