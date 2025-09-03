@@ -13,7 +13,7 @@ const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { isProvider } = useProviderStatus(user?.id);
+  const { isProvider, loading } = useProviderStatus(user?.id, { realtime: true });
 
   const handleSignOut = async () => {
     await signOut();
@@ -54,11 +54,18 @@ const Header = () => {
               <Button
                 variant="hero"
                 size="sm"
-                onClick={() => navigate('/register-provider')}
+                onClick={() => navigate(isProvider ? '/provider/dashboard' : '/register-provider')}
                 className="flex items-center gap-2"
+                disabled={loading}
               >
-                <Plus className="h-4 w-4" />
-                Become Provider
+                {loading ? (
+                  <span className="animate-spin">⌛</span>
+                ) : isProvider ? (
+                  <Package className="h-4 w-4" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+                {loading ? 'Loading...' : isProvider ? 'Provider Dashboard' : 'Become Provider'}
               </Button>
               
               <Button variant="ghost" size="sm" className="relative">
@@ -204,9 +211,19 @@ Create category filters on the main page and ensure providers can select multipl
                       <User className="h-4 w-4 mr-2" />
                       Login
                     </Button>
-                    <Button variant="hero" onClick={() => navigate('/register-provider')}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Become Provider
+                    <Button
+                      variant="hero"
+                      onClick={() => navigate(isProvider ? '/provider/dashboard' : '/register-provider')}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <span className="animate-spin mr-2">⌛</span>
+                      ) : isProvider ? (
+                        <Package className="h-4 w-4 mr-2" />
+                      ) : (
+                        <Plus className="h-4 w-4 mr-2" />
+                      )}
+                      {loading ? 'Loading...' : isProvider ? 'Provider Dashboard' : 'Become Provider'}
                     </Button>
                   </>
                 )}

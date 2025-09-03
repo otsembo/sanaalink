@@ -14,6 +14,70 @@ export type Database = {
   }
   public: {
     Tables: {
+      payments: {
+        Row: {
+          id: string
+          created_at: string
+          updated_at: string | null
+          booking_id: string
+          amount: number
+          status: 'pending' | 'completed' | 'failed'
+          provider_id: string
+          customer_id: string
+          payment_method: string
+          transaction_id: string | null
+          transaction_ref: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          updated_at?: string | null
+          booking_id: string
+          amount: number
+          status?: 'pending' | 'completed' | 'failed'
+          provider_id: string
+          customer_id: string
+          payment_method?: string
+          transaction_id?: string | null
+          transaction_ref?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          updated_at?: string | null
+          booking_id?: string
+          amount?: number
+          status?: 'pending' | 'completed' | 'failed'
+          provider_id?: string
+          customer_id?: string
+          payment_method?: string
+          transaction_id?: string | null
+          transaction_ref?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      },
       bookings: {
         Row: {
           booking_date: string
@@ -24,6 +88,7 @@ export type Database = {
           provider_id: string
           service_id: string
           status: string
+          payment_status: 'pending' | 'completed' | 'failed'
           total_amount: number
           updated_at: string
         }
@@ -36,6 +101,7 @@ export type Database = {
           provider_id: string
           service_id: string
           status?: string
+          payment_status?: 'pending' | 'completed' | 'failed'
           total_amount: number
           updated_at?: string
         }
@@ -48,6 +114,7 @@ export type Database = {
           provider_id?: string
           service_id?: string
           status?: string
+          payment_status?: 'pending' | 'completed' | 'failed'
           total_amount?: number
           updated_at?: string
         }

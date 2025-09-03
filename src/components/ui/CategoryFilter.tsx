@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -17,52 +16,53 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { craftCategories, serviceCategories, type Category } from '@/config/categories';
+import { craftCategories, serviceCategories } from '@/config/categories';
 
 interface CategoryFilterProps {
-  type?: 'service' | 'craft' | 'both';
-  onSelectionChange: (categories: { categoryId: string; subCategoryId: string }[]) => void;
-  defaultSelected?: { categoryId: string; subCategoryId: string }[];
+  /** Callback function when a category and optionally a subcategory is selected */
+  onSelect: (category: string, subCategory?: string) => void;
+  /** Initially selected category ID */
+  defaultCategory?: string;
+  /** Initially selected subcategory ID */
+  defaultSubCategory?: string;
 }
 
 export default function CategoryFilter({
-  type = 'both',
-  onSelectionChange,
-  defaultSelected = []
+  onSelect,
+  defaultCategory,
+  defaultSubCategory
 }: CategoryFilterProps) {
   const [open, setOpen] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState(defaultSelected);
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(defaultCategory);
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string | undefined>(defaultSubCategory);
 
-  const categories = type === 'both' 
-    ? [...serviceCategories, ...craftCategories]
-    : type === 'service' 
-      ? serviceCategories 
-      : craftCategories;
+  // Combine all categories
+  const categories = [...serviceCategories, ...craftCategories];
 
-  const toggleCategory = (categoryId: string, subCategoryId: string) => {
-    const isSelected = selectedCategories.some(
-      cat => cat.categoryId === categoryId && cat.subCategoryId === subCategoryId
-    );
+  // Find the current category object
+  const currentCategory = categories.find(cat => cat.id === selectedCategory);
 
-    let newSelected;
-    if (isSelected) {
-      newSelected = selectedCategories.filter(
-        cat => !(cat.categoryId === categoryId && cat.subCategoryId === subCategoryId)
-      );
-    } else {
-      newSelected = [...selectedCategories, { categoryId, subCategoryId }];
-    }
-
-    setSelectedCategories(newSelected);
-    onSelectionChange(newSelected);
+  // Handler for selecting a category and subcategory
+  const handleSelection = (categoryId: string, subCategoryId?: string) => {
+    setSelectedCategory(categoryId);
+    setSelectedSubCategory(subCategoryId);
+    onSelect(categoryId, subCategoryId);
   };
 
-  const getSelectedLabels = () => {
-    return selectedCategories.map(selected => {
-      const category = categories.find(cat => cat.id === selected.categoryId);
-      const subCategory = category?.subCategories?.find(sub => sub.id === selected.subCategoryId);
-      return subCategory?.name || '';
-    });
+  // Reset subcategory when category changes
+  useEffect(() => {
+    if (!currentCategory?.subCategories?.find(sub => sub.id === selectedSubCategory)) {
+      setSelectedSubCategory(undefined);
+    }
+  }, [selectedCategory, currentCategory, selectedSubCategory]);
+
+  const getSelectedLabel = () => {
+    const category = categories.find(cat => cat.id === selectedCategory);
+    const subCategory = category?.subCategories?.find(sub => sub.id === selectedSubCategory);
+    return {
+      categoryName: category?.name || '',
+      subCategoryName: subCategory?.name || ''
+    };
   };
 
   return (
@@ -75,9 +75,7 @@ export default function CategoryFilter({
           className="w-full justify-between"
         >
           <span>
-            {selectedCategories.length > 0
-              ? `${selectedCategories.length} selected`
-              : "Select categories..."}
+            {selectedCategory ? getSelectedLabel().categoryName : "Select category..."}
           </span>
         </Button>
       </PopoverTrigger>
@@ -89,14 +87,17 @@ export default function CategoryFilter({
             {categories.map((category) => (
               <CommandGroup key={category.id} heading={category.name}>
                 {category.subCategories?.map((subCategory) => {
-                  const isSelected = selectedCategories.some(
-                    cat => cat.categoryId === category.id && cat.subCategoryId === subCategory.id
-                  );
+                  const isSelected = 
+                    selectedCategory === category.id && 
+                    selectedSubCategory === subCategory.id;
                   
                   return (
                     <CommandItem
                       key={`${category.id}-${subCategory.id}`}
-                      onSelect={() => toggleCategory(category.id, subCategory.id)}
+                      onSelect={() => {
+                        handleSelection(category.id, subCategory.id);
+                        setOpen(false);
+                      }}
                       className="flex items-center justify-between"
                     >
                       <span>{subCategory.name}</span>
@@ -110,17 +111,16 @@ export default function CategoryFilter({
           <CommandSeparator />
         </Command>
       </PopoverContent>
-      {selectedCategories.length > 0 && (
+      {selectedCategory && (
         <div className="flex flex-wrap gap-2 mt-2">
-          {getSelectedLabels().map((label, index) => (
+          {selectedSubCategory && (
             <Badge
-              key={index}
               variant="secondary"
               className="text-sm"
             >
-              {label}
+              {getSelectedLabel().subCategoryName}
             </Badge>
-          ))}
+          )}
         </div>
       )}
     </Popover>

@@ -4,63 +4,62 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+// UI Components
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
+
+// Icons & Utils
+import { ArrowLeft, ArrowRight, Upload, User, Building, MapPin, FileText, Image, Phone } from 'lucide-react';
+
+// Services & Hooks
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, ArrowRight, Upload, User, Building, MapPin, FileText, Image, Phone, Check } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 import CategoryFilter from '@/components/ui/CategoryFilter';
 
 const providerSchema = z.object({
-  // Basic Info
+  // Basic Info (matches providers table)
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   phone: z.string().min(10, 'Phone number must be at least 10 characters'),
   whatsapp: z.string().optional(),
+  business_name: z.string().min(2, 'Business name must be at least 2 characters'),
   
-    // Business Details
-  businessName: z.string().min(2, 'Business name must be at least 2 characters'),
-  providerType: z.enum(['service', 'craft', 'both']),
-  categories: z.array(z.object({
-    categoryId: z.string(),
-    subCategoryId: z.string()
-  })),
+  // Categories (matches providers table)
+  category: z.string().min(2, 'Category is required'),
+  sub_category: z.string().optional(),
   
-  // Location
+  // Location (combined into location field)
   county: z.string().min(2, 'County is required'),
   town: z.string().min(2, 'Town is required'),
-  specificArea: z.string().min(2, 'Specific area is required'),
+  specific_area: z.string().min(2, 'Specific area is required'),
   
-  // Profile
+  // Profile and Images (matches providers table)
   bio: z.string().min(10, 'Bio must be at least 10 characters'),
-  profileImage: z.any().optional(),
+  profile_image: z.any().optional(),
+  portfolio_images: z.array(z.any()).optional(),
   
-  // Portfolio
-  portfolioImages: z.array(z.any()).optional(),
-  
-  // Contact Preferences
-  preferredContactMethod: z.enum(['email', 'phone', 'whatsapp']),
+  // Contact Preferences (matches providers table)
+  preferred_contact: z.enum(['email', 'phone', 'whatsapp']),
   
   // Terms and Conditions
-  acceptTerms: z.boolean().refine((val) => val === true, {
+  accept_terms: z.boolean().refine((val) => val === true, {
     message: 'You must accept the terms and conditions',
   }),
 });
 
 type ProviderFormData = z.infer<typeof providerSchema>;
 
+type FormFieldNames = keyof ProviderFormData;
+
 interface RegistrationStepProps {
-  form: any;
+  form: ReturnType<typeof useForm<ProviderFormData>>;
   onNext?: () => void;
   onPrev?: () => void;
 }
@@ -124,15 +123,15 @@ const ProviderRegistration = () => {
       email: user?.email || '',
       phone: '',
       whatsapp: '',
-      businessName: '',
-      providerType: undefined,
-      categories: [],
+      business_name: '',
+      category: '',
+      sub_category: '',
       county: '',
       town: '',
-      specificArea: '',
+      specific_area: '',
       bio: '',
-      preferredContactMethod: 'phone',
-      acceptTerms: false,
+      preferred_contact: 'phone',
+      accept_terms: false,
     },
   });
 
@@ -142,36 +141,29 @@ const ProviderRegistration = () => {
         throw new Error('User not authenticated');
       }
 
-      setIsSubmitting(true);
-      
-      // Upload profile image
-      let profileUrl = null;
-      if (data.profileImage) {
-        const { data: profileData, error: profileError } = await supabase.storage
-          .from('provider-images')
-          .upload(`profile/${user.id}`, data.profileImage);
-        
-        if (profileError) throw profileError;
-        profileUrl = supabase.storage.from('provider-images').getPublicUrl(profileData.path).data.publicUrl;
-      }
-      
-      // Upload portfolio images
-      const portfolioUrls: string[] = [];
-      if (data.portfolioImages?.length) {
-        for (const file of data.portfolioImages) {
-          const { data: portfolioData, error: portfolioError } = await supabase.storage
-            .from('provider-images')
-            .upload(`portfolio/${user.id}/${file.name}`, file);
-          
-          if (portfolioError) throw portfolioError;
-          const { data: { publicUrl } } = supabase.storage
-            .from('provider-images')
-            .getPublicUrl(portfolioData.path);
-          portfolioUrls.push(publicUrl);
-        }
+      // Validate terms acceptance
+      if (!data.accept_terms) {
+        toast({
+          title: 'Terms Not Accepted',
+          description: 'Please accept the terms and conditions to continue.',
+          variant: 'destructive',
+        });
+        return;
       }
 
-      // Verify if user already has a provider profile
+      // Validate preferred contact method
+      if (!data.preferred_contact) {
+        toast({
+          title: 'Contact Method Required',
+          description: 'Please select your preferred contact method.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setIsSubmitting(true);
+
+      // Check for existing provider profile first
       const { data: existingProvider } = await supabase
         .from('providers')
         .select('id')
@@ -182,6 +174,43 @@ const ProviderRegistration = () => {
         throw new Error('You already have a provider profile');
       }
       
+      // Upload profile image if provided
+      let profileUrl = null;
+      if (data.profile_image) {
+        const { data: profileData, error: profileError } = await supabase.storage
+          .from('provider-images')
+          .upload(`profile/${user.id}`, data.profile_image);
+        
+        if (profileError) {
+          throw new Error('Failed to upload profile image: ' + profileError.message);
+        }
+        profileUrl = supabase.storage.from('provider-images').getPublicUrl(profileData.path).data.publicUrl;
+      }
+      
+      // Upload portfolio images if provided
+      const portfolioUrls: string[] = [];
+      if (data.portfolio_images?.length) {
+        for (const file of data.portfolio_images) {
+          try {
+            const { data: portfolioData, error: portfolioError } = await supabase.storage
+              .from('provider-images')
+              .upload(`portfolio/${user.id}/${file.name}`, file);
+            
+            if (portfolioError) {
+              console.error('Failed to upload portfolio image:', portfolioError);
+              continue; // Skip this image but continue with others
+            }
+            
+            const { data: { publicUrl } } = supabase.storage
+              .from('provider-images')
+              .getPublicUrl(portfolioData.path);
+            portfolioUrls.push(publicUrl);
+          } catch (uploadError) {
+            console.error('Error uploading portfolio image:', uploadError);
+          }
+        }
+      }
+      
       // Create provider record
       const { data: provider, error: providerError } = await supabase
         .from('providers')
@@ -190,39 +219,34 @@ const ProviderRegistration = () => {
           name: data.name,
           email: data.email,
           phone: data.phone,
-          whatsapp: data.whatsapp || data.phone, // Use phone as WhatsApp if not provided
-          business_name: data.businessName,
-          location: `${data.specificArea}, ${data.town}, ${data.county}`,
+          whatsapp: data.whatsapp || data.phone,
+          business_name: data.business_name,
+          location: `${data.specific_area}, ${data.town}, ${data.county}`,
           bio: data.bio,
-          profile_image: profileUrl || null,
-          category: data.providerType, // Temporary, will be moved to provider_categories
-          sub_category: '', // Required by schema until migration
-          is_verified: false, // Requires admin verification
+          profile_image: profileUrl,
+          portfolio_images: portfolioUrls,
+          preferred_contact: data.preferred_contact,
+          category: data.category,
+          sub_category: data.sub_category,
+          is_verified: false
         })
         .select()
         .single();
       
-      if (providerError) throw providerError;
-
-      // Insert provider categories
-      const { error: categoriesError } = await supabase
-        .from('provider_categories')
-        .insert(
-          data.categories.map(cat => ({
-            provider_id: provider.id,
-            category_id: cat.categoryId,
-            sub_category_id: cat.subCategoryId
-          }))
-        );
-
-      if (categoriesError) throw categoriesError;
+      if (providerError) {
+        throw new Error('Failed to create provider profile: ' + providerError.message);
+      }
 
       toast({
-        title: 'Registration successful!',
+        title: 'Registration successful! 🎉',
         description: 'Your provider profile has been created and is pending verification.',
       });
 
-      navigate('/provider/dashboard');
+      // Delay navigation slightly to ensure user sees success message
+      setTimeout(() => {
+        navigate('/provider/dashboard');
+      }, 1500);
+
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create provider profile.';
       toast({
@@ -242,15 +266,60 @@ const ProviderRegistration = () => {
       case 1: // Basic Info
         return form.trigger(['name', 'email', 'phone']);
       case 2: // Business Details
-        return form.trigger(['businessName', 'providerType', 'categories']);
+        return form.trigger(['business_name', 'category']);
       case 3: // Location
-        return form.trigger(['county', 'town', 'specificArea']);
+        return form.trigger(['county', 'town', 'specific_area']);
       case 4: // Profile
         return form.trigger(['bio']);
       case 5: // Portfolio
         return true; // Portfolio is optional
-      case 6: // Final step
-        return form.trigger(['acceptTerms', 'preferredContactMethod']);
+      case 6: { // Final step
+        // For the final step, validate all fields to ensure nothing was missed
+        const allFields = await form.trigger();
+        
+        if (!allFields) {
+          // If validation fails, show which step needs attention
+          const errors = form.formState.errors;
+          
+          if (errors.name || errors.email || errors.phone) {
+            setCurrentStep(1);
+            toast({
+              title: 'Basic Information Incomplete',
+              description: 'Please complete your basic information first.',
+              variant: 'destructive',
+            });
+          } else if (errors.business_name || errors.category) {
+            setCurrentStep(2);
+            toast({
+              title: 'Business Details Incomplete',
+              description: 'Please complete your business details.',
+              variant: 'destructive',
+            });
+          } else if (errors.county || errors.town || errors.specific_area) {
+            setCurrentStep(3);
+            toast({
+              title: 'Location Information Incomplete',
+              description: 'Please complete your location information.',
+              variant: 'destructive',
+            });
+          } else if (errors.bio) {
+            setCurrentStep(4);
+            toast({
+              title: 'Profile Information Incomplete',
+              description: 'Please complete your profile information.',
+              variant: 'destructive',
+            });
+          } else if (!form.getValues('accept_terms')) {
+            toast({
+              title: 'Terms Not Accepted',
+              description: 'Please accept the terms and conditions to continue.',
+              variant: 'destructive',
+            });
+          }
+          return false;
+        }
+        return true;
+      }
       default:
         return true;
     }
@@ -358,7 +427,7 @@ const ProviderRegistration = () => {
             
             <FormField
               control={form.control}
-              name="businessName"
+              name="business_name"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Business Name</FormLabel>
@@ -372,7 +441,7 @@ const ProviderRegistration = () => {
             
             <FormField
               control={form.control}
-              name="providerType"
+              name="category"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Business Type</FormLabel>
@@ -398,19 +467,22 @@ const ProviderRegistration = () => {
 
             <FormField
               control={form.control}
-              name="categories"
+              name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Business Categories</FormLabel>
+                  <FormLabel>Business Category</FormLabel>
                   <FormControl>
                     <CategoryFilter
-                      type={form.watch('providerType')}
-                      onSelectionChange={field.onChange}
-                      defaultSelected={field.value as { categoryId: string, subCategoryId: string }[]}
+                      onSelect={(category, subCategory) => {
+                        form.setValue('category', category);
+                        form.setValue('sub_category', subCategory || '');
+                      }}
+                      defaultCategory={field.value}
+                      defaultSubCategory={form.watch('sub_category')}
                     />
                   </FormControl>
                   <FormDescription>
-                    Select all categories that apply to your business.
+                    Select your primary business category and subcategory.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -479,7 +551,7 @@ const ProviderRegistration = () => {
 
             <FormField
               control={form.control}
-              name="specificArea"
+              name="specific_area"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Specific Area</FormLabel>
@@ -548,27 +620,72 @@ const ProviderRegistration = () => {
 
       case 6:
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex items-center gap-2 mb-4">
               <Phone className="h-5 w-5 text-kenya-sunset" />
               <h3 className="font-semibold text-lg">Contact Preferences</h3>
             </div>
+
+            <FormField
+              control={form.control}
+              name="preferred_contact"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Preferred Contact Method</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="How should customers contact you?" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="phone">Phone Call</SelectItem>
+                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                      <SelectItem value="email">Email</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    This will be shown as your primary contact method
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <div className="bg-green-50 p-4 rounded-lg">
               <h4 className="font-medium text-green-800 mb-2">Registration Summary</h4>
               <div className="space-y-2 text-sm text-green-700">
                 <p><strong>Name:</strong> {form.watch('name')}</p>
-                <p><strong>Business:</strong> {form.watch('businessName')}</p>
-                <p><strong>Category:</strong> {form.watch('categories').length} selected</p>
-                <p><strong>Location:</strong> {`${form.watch('specificArea')}, ${form.watch('town')}, ${form.watch('county')}`}</p>
+                <p><strong>Business:</strong> {form.watch('business_name')}</p>
+                <p><strong>Category:</strong> {form.watch('category') || 'None'} {form.watch('sub_category') ? `(${form.watch('sub_category')})` : ''}</p>
+                <p><strong>Location:</strong> {`${form.watch('specific_area')}, ${form.watch('town')}, ${form.watch('county')}`}</p>
                 <p><strong>Phone:</strong> {form.watch('phone')}</p>
+                <p><strong>Contact Via:</strong> {form.watch('preferred_contact')}</p>
               </div>
             </div>
-            
-            <p className="text-sm text-gray-600">
-              By registering, you agree to our terms of service and privacy policy.
-              Your profile will be reviewed and activated within 24 hours.
-            </p>
+
+            <FormField
+              control={form.control}
+              name="accept_terms"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Accept Terms and Conditions</FormLabel>
+                    <FormDescription>
+                      By checking this box, you agree to our terms of service and privacy policy.
+                      Your profile will be reviewed and activated within 24 hours.
+                    </FormDescription>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         );
 

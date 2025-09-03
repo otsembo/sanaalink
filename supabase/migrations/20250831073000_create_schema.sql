@@ -1,9 +1,13 @@
--- Enable UUID extension if not already enabled
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- Enable UUID extension (pgcrypto is preferred on Supabase)
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Create providers table if it doesn't exist
+-- ======================
+-- Tables
+-- ======================
+
+-- Providers
 CREATE TABLE IF NOT EXISTS providers (
-  id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   name text NOT NULL,
   email text NOT NULL,
@@ -24,9 +28,9 @@ CREATE TABLE IF NOT EXISTS providers (
   updated_at timestamp with time zone
 );
 
--- Create services table
+-- Services
 CREATE TABLE IF NOT EXISTS services (
-  id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   provider_id uuid REFERENCES providers(id) ON DELETE CASCADE,
   title text NOT NULL,
   description text NOT NULL,
@@ -40,9 +44,9 @@ CREATE TABLE IF NOT EXISTS services (
   updated_at timestamp with time zone
 );
 
--- Create products table
+-- Products
 CREATE TABLE IF NOT EXISTS products (
-  id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   provider_id uuid REFERENCES providers(id) ON DELETE CASCADE,
   title text NOT NULL,
   description text NOT NULL,
@@ -56,9 +60,9 @@ CREATE TABLE IF NOT EXISTS products (
   updated_at timestamp with time zone
 );
 
--- Create bookings table
+-- Bookings
 CREATE TABLE IF NOT EXISTS bookings (
-  id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   provider_id uuid REFERENCES providers(id) ON DELETE CASCADE,
   customer_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   service_id uuid REFERENCES services(id) ON DELETE SET NULL,
@@ -71,9 +75,9 @@ CREATE TABLE IF NOT EXISTS bookings (
   updated_at timestamp with time zone
 );
 
--- Create orders table
+-- Orders
 CREATE TABLE IF NOT EXISTS orders (
-  id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   provider_id uuid REFERENCES providers(id) ON DELETE CASCADE,
   customer_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   product_id uuid REFERENCES products(id) ON DELETE SET NULL,
@@ -88,9 +92,9 @@ CREATE TABLE IF NOT EXISTS orders (
   updated_at timestamp with time zone
 );
 
--- Create availability_settings table
+-- Availability Settings
 CREATE TABLE IF NOT EXISTS availability_settings (
-  id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   provider_id uuid REFERENCES providers(id) ON DELETE CASCADE,
   weekday text NOT NULL CHECK (weekday IN ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')),
   start_time time NOT NULL,
@@ -101,9 +105,9 @@ CREATE TABLE IF NOT EXISTS availability_settings (
   CONSTRAINT availability_settings_weekday_provider_unique UNIQUE (provider_id, weekday)
 );
 
--- Create domain_configs table
+-- Domain Configs
 CREATE TABLE IF NOT EXISTS domain_configs (
-  id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   provider_id uuid REFERENCES providers(id) ON DELETE CASCADE,
   domain_name text NOT NULL UNIQUE,
   is_verified boolean DEFAULT false,
@@ -113,9 +117,9 @@ CREATE TABLE IF NOT EXISTS domain_configs (
   expires_at timestamp with time zone
 );
 
--- Create reviews table
+-- Reviews
 CREATE TABLE IF NOT EXISTS reviews (
-  id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   provider_id uuid REFERENCES providers(id) ON DELETE CASCADE,
   customer_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   service_id uuid REFERENCES services(id) ON DELETE CASCADE,
@@ -133,7 +137,7 @@ CREATE TABLE IF NOT EXISTS reviews (
   )
 );
 
--- Create profiles table for public user profiles
+-- Profiles
 CREATE TABLE IF NOT EXISTS profiles (
   id uuid REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   name text,
@@ -142,7 +146,9 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at timestamp with time zone
 );
 
--- Set up Row Level Security (RLS)
+-- ======================
+-- Enable RLS
+-- ======================
 ALTER TABLE providers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
@@ -153,52 +159,117 @@ ALTER TABLE domain_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
--- Create policies
--- Providers: Only authenticated users can create, only owner can update/delete
-CREATE POLICY "Enable public read access to providers" ON providers FOR SELECT USING (true);
-CREATE POLICY "Enable authenticated create access to providers" ON providers FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "Enable owner update access to providers" ON providers FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Enable owner delete access to providers" ON providers FOR DELETE USING (auth.uid() = user_id);
+-- ======================
+-- Policies
+-- ======================
 
--- Services & Products: Public can view, only provider can manage
-CREATE POLICY "Enable public read access to services" ON services FOR SELECT USING (true);
-CREATE POLICY "Enable provider manage access to services" ON services USING (auth.uid() IN (SELECT user_id FROM providers WHERE id = provider_id));
+-- Providers
+CREATE POLICY "Enable public read access to providers"
+  ON providers FOR SELECT USING (true);
 
-CREATE POLICY "Enable public read access to products" ON products FOR SELECT USING (true);
-CREATE POLICY "Enable provider manage access to products" ON products USING (auth.uid() IN (SELECT user_id FROM providers WHERE id = provider_id));
+CREATE POLICY "Enable authenticated create access to providers"
+  ON providers FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = user_id);
 
--- Bookings & Orders: Customer and provider can view their own
-CREATE POLICY "Enable customer/provider read access to bookings" ON bookings FOR SELECT USING (
-  auth.uid() IN (
-    SELECT user_id FROM providers WHERE id = provider_id
-    UNION
-    SELECT customer_id FROM bookings WHERE customer_id = auth.uid()
-  )
-);
+CREATE POLICY "Enable owner update access to providers"
+  ON providers FOR UPDATE TO authenticated
+  USING (auth.uid() = user_id);
 
-CREATE POLICY "Enable customer/provider read access to orders" ON orders FOR SELECT USING (
-  auth.uid() IN (
-    SELECT user_id FROM providers WHERE id = provider_id
-    UNION
-    SELECT customer_id FROM orders WHERE customer_id = auth.uid()
-  )
-);
+CREATE POLICY "Enable owner delete access to providers"
+  ON providers FOR DELETE TO authenticated
+  USING (auth.uid() = user_id);
 
--- Reviews: Public can read, authenticated users can create
-CREATE POLICY "Enable public read access to reviews" ON reviews FOR SELECT USING (true);
-CREATE POLICY "Enable authenticated create access to reviews" ON reviews FOR INSERT TO authenticated WITH CHECK (auth.uid() = customer_id);
-CREATE POLICY "Enable owner response access to reviews" ON reviews FOR UPDATE USING (
-  auth.uid() IN (SELECT user_id FROM providers WHERE id = provider_id)
-) WITH CHECK (
-  auth.uid() IN (SELECT user_id FROM providers WHERE id = provider_id) AND
-  (OLD.response IS NULL OR OLD.response = response) -- Only allow updating response fields
-);
+-- Services
+CREATE POLICY "Enable public read access to services"
+  ON services FOR SELECT USING (true);
 
--- Profiles: Public can read, user can manage their own
-CREATE POLICY "Enable public read access to profiles" ON profiles FOR SELECT USING (true);
-CREATE POLICY "Enable user manage access to profiles" ON profiles USING (auth.uid() = id);
+CREATE POLICY "Enable provider manage access to services"
+  ON services FOR ALL TO authenticated
+  USING (auth.uid() IN (SELECT user_id FROM providers WHERE id = provider_id));
 
--- Create indexes for better performance
+-- Products
+CREATE POLICY "Enable public read access to products"
+  ON products FOR SELECT USING (true);
+
+CREATE POLICY "Enable provider manage access to products"
+  ON products FOR ALL TO authenticated
+  USING (auth.uid() IN (SELECT user_id FROM providers WHERE id = provider_id));
+
+-- Bookings
+CREATE POLICY "Enable customer/provider read access to bookings"
+  ON bookings FOR SELECT TO authenticated
+  USING (
+    auth.uid() = customer_id OR
+    auth.uid() IN (SELECT user_id FROM providers WHERE id = provider_id)
+  );
+
+-- Orders
+CREATE POLICY "Enable customer/provider read access to orders"
+  ON orders FOR SELECT TO authenticated
+  USING (
+    auth.uid() = customer_id OR
+    auth.uid() IN (SELECT user_id FROM providers WHERE id = provider_id)
+  );
+
+-- Reviews
+CREATE POLICY "Enable public read access to reviews"
+  ON reviews FOR SELECT USING (true);
+
+CREATE POLICY "Enable authenticated create access to reviews"
+  ON reviews FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = customer_id);
+
+CREATE POLICY "Enable provider update access to reviews"
+  ON reviews FOR UPDATE TO authenticated
+  USING (auth.uid() IN (SELECT user_id FROM providers WHERE id = provider_id))
+  WITH CHECK (auth.uid() IN (SELECT user_id FROM providers WHERE id = provider_id));
+
+-- Profiles
+CREATE POLICY "Enable public read access to profiles"
+  ON profiles FOR SELECT USING (true);
+
+CREATE POLICY "Enable user manage access to profiles"
+  ON profiles FOR ALL TO authenticated
+  USING (auth.uid() = id);
+
+-- ======================
+-- Triggers
+-- ======================
+
+-- Reviews: Only allow providers to update response/response_at
+CREATE OR REPLACE FUNCTION enforce_response_only()
+RETURNS trigger AS $$
+BEGIN
+  -- Allow updates only if response or response_at is changed
+  IF NEW.response IS DISTINCT FROM OLD.response
+     OR NEW.response_at IS DISTINCT FROM OLD.response_at THEN
+    -- Everything else must remain unchanged
+    IF (NEW.provider_id = OLD.provider_id)
+       AND (NEW.customer_id = OLD.customer_id)
+       AND (NEW.service_id IS NOT DISTINCT FROM OLD.service_id)
+       AND (NEW.product_id IS NOT DISTINCT FROM OLD.product_id)
+       AND (NEW.rating = OLD.rating)
+       AND (NEW.comment = OLD.comment)
+       AND (NEW.images IS NOT DISTINCT FROM OLD.images)
+       AND (NEW.created_at = OLD.created_at) THEN
+      RETURN NEW;
+    ELSE
+      RAISE EXCEPTION 'Only response and response_at may be updated on reviews';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS reviews_response_only ON reviews;
+CREATE TRIGGER reviews_response_only
+BEFORE UPDATE ON reviews
+FOR EACH ROW
+EXECUTE FUNCTION enforce_response_only();
+
+-- ======================
+-- Indexes
+-- ======================
 CREATE INDEX IF NOT EXISTS idx_providers_user_id ON providers(user_id);
 CREATE INDEX IF NOT EXISTS idx_services_provider_id ON services(provider_id);
 CREATE INDEX IF NOT EXISTS idx_products_provider_id ON products(provider_id);

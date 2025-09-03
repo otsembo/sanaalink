@@ -18,7 +18,7 @@ export interface Service {
   duration?: number;
   category: string;
   images?: string[];
-  availability: 'available' | 'unavailable';
+  availability: string | null;
   created_at: string;
   updated_at: string;
 }

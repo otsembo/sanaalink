@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Provider, Service, Product } from '@/types/provider';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,7 +43,43 @@ export default function ServicesProducts({ provider }: ServicesProductsProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [editItem, setEditItem] = useState<Service | Product | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  // Fetch services and products
+  const fetchItems = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      
+      const [servicesResponse, productsResponse] = await Promise.all([
+        supabase
+          .from('services')
+          .select('*')
+          .eq('provider_id', provider.id)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('products')
+          .select('*')
+          .eq('provider_id', provider.id)
+          .order('created_at', { ascending: false })
+      ]);
+
+      if (servicesResponse.error) throw servicesResponse.error;
+      if (productsResponse.error) throw productsResponse.error;
+
+      setServices(servicesResponse.data as Service[]);
+      setProducts(productsResponse.data as Product[]);
+    } catch (error) {
+      console.error('Error fetching items:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load services and products.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [provider.id, toast]);
 
   // Service/Product Form State
   const [formData, setFormData] = useState({
@@ -71,12 +107,30 @@ export default function ServicesProducts({ provider }: ServicesProductsProps) {
       isAvailable: true,
     });
     setEditItem(null);
+    setIsDialogOpen(false);
+  };
+
+  const populateFormForEdit = (item: Service | Product) => {
+    setFormData({
+      name: item.title,
+      description: item.description,
+      price: item.price.toString(),
+      duration: 'duration' in item ? item.duration?.toString() || '' : '',
+      stock: 'stock_quantity' in item ? item.stock_quantity.toString() : '',
+      category: provider.category,
+      subCategory: provider.sub_category || '',
+      images: [], // Keep empty as we don't want to replace existing images by default
+      isAvailable: 'availability' in item ? item.availability === 'available' : true,
+    });
+    setEditItem(item);
+    setIsDialogOpen(true); // Open the dialog when editing
   };
 
   const handleImageUpload = async (files: File[], itemId: string, type: 'service' | 'product') => {
     try {
       const path = `${provider.id}/${type}/${itemId}`;
-      const urls = await uploadMultipleImages(files, path);
+      const bucket = type === 'service' ? 'service-images' : 'product-images';
+      const urls = await uploadMultipleImages(files, path, bucket);
       return urls;
     } catch (error) {
       console.error('Error uploading images:', error);
@@ -88,35 +142,77 @@ export default function ServicesProducts({ provider }: ServicesProductsProps) {
     try {
       setIsSubmitting(true);
 
+      // Validate required fields
+      if (!formData.name.trim()) {
+        throw new Error('Name is required');
+      }
+      if (!formData.description.trim()) {
+        throw new Error('Description is required');
+      }
+
       const price = parseFloat(formData.price);
       if (isNaN(price) || price < 0) {
         throw new Error('Please enter a valid price');
       }
 
-      let uploadedImages: string[] = [];
-      if (formData.images.length > 0) {
-        // If editing, we'll use a temporary ID for image upload
-        const tempId = editItem?.id || 'temp';
-        uploadedImages = await handleImageUpload(formData.images, tempId, type);
+      // Product-specific validation
+      if (type === 'product') {
+        const stock = parseInt(formData.stock);
+        if (isNaN(stock) || stock < 0) {
+          throw new Error('Please enter a valid stock quantity');
+        }
       }
 
-      const itemData: any = {
+      // Handle image updates
+      let finalImages: string[] = [];
+      if (editItem) {
+        // If editing, keep existing images unless new ones are uploaded
+        finalImages = (editItem.images || []).slice();
+      }
+      
+      if (formData.images.length > 0) {
+        const itemId = editItem?.id || 'temp';
+        const uploadedImages = await handleImageUpload(formData.images, itemId, type);
+        finalImages = [...finalImages, ...uploadedImages];
+      }
+
+      interface BaseItem {
+        provider_id: string;
+        title: string;
+        description: string;
+        price: number;
+        category: string;
+        images: string[]; // Always include images field
+      }
+
+      interface ServiceData extends BaseItem {
+        duration?: number;
+        availability: 'available' | 'unavailable';
+      }
+
+      interface ProductData extends BaseItem {
+        stock_quantity: number;
+      }
+
+      const baseData: BaseItem = {
         provider_id: provider.id,
         title: formData.name,
         description: formData.description,
         price,
         category: formData.category,
-        ...(uploadedImages.length > 0 ? { images: uploadedImages } : {}),
-        ...(type === 'service' 
-          ? { 
-              duration: formData.duration ? parseInt(formData.duration) : undefined,
-              availability: formData.isAvailable ? 'available' : 'unavailable'
-            }
-          : { 
-              stock_quantity: formData.stock ? parseInt(formData.stock) : 0
-            }
-        ),
+        images: finalImages,
       };
+
+      const itemData: ServiceData | ProductData = type === 'service'
+        ? {
+            ...baseData,
+            duration: formData.duration ? parseInt(formData.duration) : undefined,
+            availability: formData.isAvailable ? 'available' : 'unavailable'
+          }
+        : {
+            ...baseData,
+            stock_quantity: formData.stock ? parseInt(formData.stock) : 0
+          };
 
       if (editItem) {
         // Update existing item
@@ -146,6 +242,7 @@ export default function ServicesProducts({ provider }: ServicesProductsProps) {
       }
 
       resetForm();
+      setIsDialogOpen(false);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An error occurred';
       console.error('Error submitting form:', error);
@@ -161,6 +258,29 @@ export default function ServicesProducts({ provider }: ServicesProductsProps) {
 
   const handleDelete = async (id: string, type: 'service' | 'product') => {
     try {
+      // First delete images from storage if they exist
+      const item = type === 'service' 
+        ? services.find(s => s.id === id)
+        : products.find(p => p.id === id);
+
+      if (item?.images?.length) {
+        const bucket = type === 'service' ? 'service-images' : 'product-images';
+        const imagePaths = item.images.map(url => {
+          const parts = url.split('/');
+          return parts[parts.length - 1];
+        });
+        
+        const { error: storageError } = await supabase.storage
+          .from(bucket)
+          .remove(imagePaths);
+
+        if (storageError) {
+          console.error('Error deleting images:', storageError);
+          // Continue with deletion even if image deletion fails
+        }
+      }
+
+      // Delete the item from the database
       const { error } = await supabase
         .from(type === 'service' ? 'services' : 'products')
         .delete()
@@ -179,6 +299,8 @@ export default function ServicesProducts({ provider }: ServicesProductsProps) {
       } else {
         setProducts(products.filter(p => p.id !== id));
       }
+
+      await fetchItems(); // Refresh the list
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An error occurred';
       toast({
@@ -189,13 +311,64 @@ export default function ServicesProducts({ provider }: ServicesProductsProps) {
     }
   };
 
+  // Fetch data and set up real-time subscriptions
+  useEffect(() => {
+    fetchItems();
+
+    // Subscribe to services changes
+    const servicesSubscription = supabase
+      .channel('services_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'services',
+          filter: `provider_id=eq.${provider.id}`,
+        },
+        () => {
+          fetchItems();
+        }
+      )
+      .subscribe();
+
+    // Subscribe to products changes
+    const productsSubscription = supabase
+      .channel('products_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'products',
+          filter: `provider_id=eq.${provider.id}`,
+        },
+        () => {
+          fetchItems();
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscriptions
+    return () => {
+      servicesSubscription.unsubscribe();
+      productsSubscription.unsubscribe();
+    };
+  }, [provider.id, fetchItems]);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Services & Products</h2>
-        <Dialog onOpenChange={() => resetForm()}>
+        <Dialog 
+          open={isDialogOpen} 
+          onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
-            <Button>
+            <Button onClick={() => setIsDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Add {activeTab === 'services' ? 'Service' : 'Product'}
             </Button>
@@ -334,7 +507,7 @@ export default function ServicesProducts({ provider }: ServicesProductsProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setEditItem(service)}
+                    onClick={() => populateFormForEdit(service)}
                   >
                     <Edit className="w-4 h-4 mr-2" />
                     Edit
@@ -378,30 +551,44 @@ export default function ServicesProducts({ provider }: ServicesProductsProps) {
                   <CardDescription>{product.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
-                    <p className="text-2xl font-bold">
-                      {new Intl.NumberFormat('en-KE', {
-                        style: 'currency',
-                        currency: 'KES',
-                      }).format(product.price)}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Stock: {product.stock_quantity} units
-                    </p>
+                  <div className="space-y-4">
                     {product.images && product.images.length > 0 && (
-                      <img 
-                        src={product.images[0]} 
-                        alt={product.title}
-                        className="w-full h-48 object-cover rounded-md"
-                      />
+                      <div className="relative aspect-video">
+                        <img 
+                          src={product.images[0]} 
+                          alt={product.title}
+                          className="w-full h-full object-cover rounded-md"
+                        />
+                      </div>
                     )}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-start">
+                        <p className="text-2xl font-bold">
+                          {new Intl.NumberFormat('en-KE', {
+                            style: 'currency',
+                            currency: 'KES',
+                          }).format(product.price)}
+                        </p>
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          product.stock_quantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {product.stock_quantity > 0 ? 'In Stock' : 'Out of Stock'}
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        Stock: {product.stock_quantity} units
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Category: {product.category}
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
                 <CardFooter className="justify-between">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setEditItem(product)}
+                    onClick={() => populateFormForEdit(product)}
                   >
                     <Edit className="w-4 h-4 mr-2" />
                     Edit
@@ -424,8 +611,9 @@ export default function ServicesProducts({ provider }: ServicesProductsProps) {
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => handleDelete(product.id, 'product')}
+                    disabled={isSubmitting}
                         >
-                          Delete
+                          {isSubmitting ? 'Deleting...' : 'Delete'}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
