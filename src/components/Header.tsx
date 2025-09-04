@@ -151,12 +151,7 @@ const Header = () => {
                 className="text-lg font-medium text-foreground hover:text-primary transition-colors"
                 onClick={() => setIsOpen(false)}
               >
-                Services"Implement the complete category system with these service categories:
-Home Maintenance, Construction, Specialized Trades, Automotive, Property Care, Home Improvement, Beauty Services, Wellness Services, Fitness Services, Entertainment, Photography/Video, Event Services, Performance Arts, Moving Services, Courier Services, Driver Services, Electronic Repair
-And these craft categories:
-Art & Decor, Fashion & Textiles, Pottery & Ceramics, Woodwork, Jewelry, Home Products, Musical Instruments, Stone Carving, Fiber Arts, Cultural Items, Craft Supplies, Fine Art, Leather Goods
-Create category filters on the main page and ensure providers can select multiple categories during registration."
-
+                Services
               </a>
               <a 
                 href="#crafts" 
