@@ -51,7 +51,7 @@ export default function ProviderDashboard() {
 
       setProvider({
         ...data,
-        preferred_contact: data.preferred_contact || 'phone',
+        preferred_contact: (data.preferred_contact as 'email' | 'phone' | 'whatsapp') || 'phone',
         portfolio_images: [],
         average_rating: 0,
         total_reviews: 0
@@ -192,7 +192,7 @@ export default function ProviderDashboard() {
         path="settings" 
         element={
           <ProviderDashboardLayout currentTab="settings">
-            <Settings provider={provider} setProvider={setProvider} />
+            <Settings provider={provider} />
           </ProviderDashboardLayout>
         } 
       />

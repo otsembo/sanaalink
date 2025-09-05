@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { WHMCSRedirect } from '@/components/WHMCSRedirect';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -75,6 +76,8 @@ const Header = () => {
                   0
                 </Badge>
               </Button>
+              
+              <WHMCSRedirect className="text-sm px-3 py-1" />
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -175,6 +178,8 @@ const Header = () => {
                 About
               </a>
               <div className="flex flex-col space-y-2 mt-6">
+                <WHMCSRedirect className="justify-start" />
+                
                 {user ? (
                   <>
                     <div className="flex items-center space-x-2 mb-2">

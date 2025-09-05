@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, Plus, Minus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { initiateSTKPush } from '@/integrations/supabase/mpesa';
@@ -20,7 +20,7 @@ interface ProductOrderDialogProps {
 }
 
 export default function ProductOrderDialog({ isOpen, onClose, product, provider }: ProductOrderDialogProps) {
-  const { state } = useApp();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [phone, setPhone] = useState('');
@@ -31,7 +31,7 @@ export default function ProductOrderDialog({ isOpen, onClose, product, provider 
   const totalAmount = product.price * quantity;
 
   const handleOrder = async () => {
-    if (!state.currentUser) {
+    if (!user) {
       toast({
         title: "Login Required",
         description: "Please login to place an order.",
@@ -65,7 +65,7 @@ export default function ProductOrderDialog({ isOpen, onClose, product, provider 
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert({
-          customer_id: state.currentUser.id,
+      customer_id: user.id,
           provider_id: provider.id,
           product_id: product.id,
           quantity,

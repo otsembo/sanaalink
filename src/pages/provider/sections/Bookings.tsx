@@ -70,7 +70,7 @@ export default function Bookings({ provider }: BookingsProps) {
       const mappedServices = (data || []).map(item => ({
         id: item.id,
         provider_id: item.provider_id,
-        name: item.title,
+        title: item.title,
         description: item.description,
         price: item.price,
         duration: item.duration,
@@ -78,6 +78,7 @@ export default function Bookings({ provider }: BookingsProps) {
         sub_category: item.sub_category,
         images: item.images,
         is_available: true,
+        availability: 'unavailable',
         created_at: item.created_at,
         updated_at: item.updated_at
       }));
@@ -167,7 +168,7 @@ export default function Bookings({ provider }: BookingsProps) {
 
   const getServiceName = (serviceId: string) => {
     const service = services.find(s => s.id === serviceId);
-    return service ? service.name : 'Unknown Service';
+    return service ? service.title : 'Unknown Service';
   };
 
   return (
@@ -189,7 +190,7 @@ export default function Bookings({ provider }: BookingsProps) {
               <Card key={booking.id}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <div>
-                    <CardTitle>{getServiceName(booking.service_id)}</CardTitle>
+                      <CardTitle>{getServiceName(booking.service_id)}</CardTitle>
                     <CardDescription>
                       {format(new Date(booking.booking_date), 'PPP')} at {format(new Date(booking.booking_date), 'HH:mm')}
                     </CardDescription>
@@ -267,7 +268,7 @@ export default function Bookings({ provider }: BookingsProps) {
                   <div>
                     <CardTitle>{getServiceName(booking.service_id)}</CardTitle>
                     <CardDescription>
-                      {format(new Date(booking.date), 'PPP')} at {booking.time}
+                      {format(new Date(booking.booking_date), 'PPP')}
                     </CardDescription>
                   </div>
                   <Badge className={getStatusColor(booking.status)}>
@@ -315,7 +316,7 @@ export default function Bookings({ provider }: BookingsProps) {
                   <div>
                     <CardTitle>{getServiceName(booking.service_id)}</CardTitle>
                     <CardDescription>
-                      {format(new Date(booking.date), 'PPP')} at {booking.time}
+                      {format(new Date(booking.booking_date), 'PPP')}
                     </CardDescription>
                   </div>
                   <Badge className={getStatusColor(booking.status)}>

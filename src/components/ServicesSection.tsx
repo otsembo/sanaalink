@@ -245,7 +245,7 @@ const ServicesSection = () => {
                           <BookingButton 
                             service={service}
                             provider={provider}
-                            variant="accent" 
+                            variant="default" 
                             size="sm"
                           />
                         </div>

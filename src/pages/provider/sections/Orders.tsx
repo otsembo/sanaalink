@@ -69,10 +69,10 @@ export default function Orders({ provider }: OrdersProps) {
       const mappedProducts = (data || []).map(item => ({
         id: item.id,
         provider_id: item.provider_id,
-        name: item.title,
+        title: item.title,
         description: item.description,
         price: item.price,
-        stock: item.stock_quantity,
+        stock_quantity: item.stock_quantity,
         category: provider.category,
         sub_category: item.sub_category,
         images: item.images,
@@ -146,7 +146,7 @@ export default function Orders({ provider }: OrdersProps) {
     switch (status) {
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
-      case 'processing':
+      case 'confirmed':
         return 'bg-blue-100 text-blue-800';
       case 'shipped':
         return 'bg-purple-100 text-purple-800';
@@ -161,7 +161,7 @@ export default function Orders({ provider }: OrdersProps) {
 
   const getProductName = (productId: string) => {
     const product = products.find(p => p.id === productId);
-    return product ? product.name : 'Unknown Product';
+    return product ? product.title : 'Unknown Product';
   };
 
   const getNextStatus = (currentStatus: Order['status']) => {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,10 +9,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Grid2X2, List, MapPin, MessageCircle, Search, SlidersHorizontal, PackageOpen, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { BookingButton } from '@/components/ui/booking-button';
 import type { Provider, Service } from '@/types/provider';
 
 const ServicesGallery = () => {
-  const { state } = useApp();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
@@ -20,62 +21,63 @@ const ServicesGallery = () => {
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<Service[]>([]);
   const [providers, setProviders] = useState<{ [key: string]: Provider }>({});
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch services and their providers
-      const fetchServices = async () => {
-      try {
-        setLoading(true);
-        
-        // Get verified providers first
-        const { data: providersData, error: providersError } = await supabase
-          .from('providers')
-          .select('*')
-          .eq('is_verified', true);
+  const fetchServices = async () => {
+    try {
+      setLoading(true);
+      
+      // Get verified providers first
+      const { data: providersData, error: providersError } = await supabase
+        .from('providers')
+        .select('*')
+        .eq('is_verified', true);
 
-        if (providersError) throw providersError;
+      if (providersError) throw providersError;
 
-        // Create providers lookup map with default values
-        const providersMap = providersData.reduce((acc, provider) => {
-          acc[provider.id] = {
-            ...provider,
-            portfolio_images: [],
-            preferred_contact: 'phone',
-            average_rating: 0,
-            total_reviews: 0
-          };
-          return acc;
-        }, {} as { [key: string]: Provider });
+      // Create providers lookup map with default values
+      const providersMap = providersData.reduce((acc, provider) => {
+        acc[provider.id] = {
+          ...provider,
+          portfolio_images: [],
+          preferred_contact: 'phone',
+          average_rating: 0,
+          total_reviews: 0
+        };
+        return acc;
+      }, {} as { [key: string]: Provider });
 
-        // Get all services from verified providers
-        const { data: servicesData, error: servicesError } = await supabase
-          .from('services')
-          .select('*')
-          .in('provider_id', Object.keys(providersMap))
-          .order('created_at', { ascending: false });
+      // Get all services from verified providers
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select('*')
+        .in('provider_id', Object.keys(providersMap))
+        .order('created_at', { ascending: false });
 
-        if (servicesError) throw servicesError;
+      if (servicesError) throw servicesError;
 
-        // Map the services data to match our Service type
-        const mappedServices: Service[] = servicesData.map(service => ({
-          ...service,
-          // Use the provider's category if service doesn't have one
-          category: providers[service.provider_id]?.category || 'Uncategorized',
-          availability: service.availability || 'unavailable'
-        }));
+      // Map the services data to match our Service type
+      const mappedServices: Service[] = servicesData.map(service => ({
+        ...service,
+        // Use the provider's category if service doesn't have one  
+        category: providersMap[service.provider_id]?.category || 'Uncategorized',
+        availability: typeof service.availability === 'string' ? service.availability : 'unavailable'
+      }));
 
-        setProviders(providersMap);
-        setServices(mappedServices);
-      } catch (error) {
-        console.error('Error fetching services:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load services. Please try again later.',
-          variant: 'destructive',
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+      setProviders(providersMap);
+      setServices(mappedServices);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load services. Please try again later.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchServices();
@@ -93,7 +95,7 @@ const ServicesGallery = () => {
   };
 
   const handleContactProvider = (providerId: string) => {
-    if (!state.currentUser) {
+    if (!user) {
       toast({
         title: "Login Required",
         description: "Please login to contact providers.",
@@ -111,7 +113,14 @@ const ServicesGallery = () => {
     }
   };
 
-  const sortedServices = sortServices(services);
+  // Filter services based on search query
+  const filteredServices = services.filter(service =>
+    service.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    service.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    providers[service.provider_id]?.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const sortedServices = sortServices(filteredServices);
 
   return (
     <div className="min-h-screen bg-background">
@@ -132,8 +141,8 @@ const ServicesGallery = () => {
               <Input
                 placeholder="Search services..."
                 className="pl-10"
-                value={state.searchQuery}
-                onChange={(e) => state.searchQuery = e.target.value}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <div className="flex gap-2">
@@ -174,17 +183,17 @@ const ServicesGallery = () => {
           </div>
 
           {/* Active Filters */}
-          {state.searchQuery && (
+          {searchQuery && (
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Active filters:</span>
               <Badge variant="secondary" className="text-xs">
                 <Search className="h-3 w-3 mr-1" />
-                "{state.searchQuery}"
+                "{searchQuery}"
                 <Button
                   variant="ghost"
                   size="sm"
                   className="h-auto w-auto p-0 ml-1"
-                  onClick={() => state.searchQuery = ''}
+                  onClick={() => setSearchQuery('')}
                 >
                   <X className="h-3 w-3" />
                 </Button>
@@ -231,15 +240,15 @@ const ServicesGallery = () => {
               <PackageOpen className="mx-auto h-12 w-12 text-muted-foreground/50" />
               <h3 className="mt-4 text-lg font-semibold text-foreground">No Services Found</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                {state.searchQuery 
+                {searchQuery 
                   ? "No services match your search criteria. Try adjusting your filters or search terms."
                   : "There are no services available at the moment. Please check back later."}
               </p>
-              {state.searchQuery && (
+              {searchQuery && (
                 <Button
                   variant="outline"
                   className="mt-4"
-                  onClick={() => state.searchQuery = ''}
+                  onClick={() => setSearchQuery('')}
                 >
                   Clear Search
                 </Button>
@@ -303,12 +312,12 @@ const ServicesGallery = () => {
                         >
                           <MessageCircle className="h-3 w-3" />
                         </Button>
-                        <Button
-                          variant="accent"
+                        <BookingButton 
+                          service={service} 
+                          provider={provider}
+                          variant="default"
                           size="sm"
-                        >
-                          Book Now
-                        </Button>
+                        />
                       </div>
                     </div>
                   </CardContent>

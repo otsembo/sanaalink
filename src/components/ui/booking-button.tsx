@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button } from './button'
-import { useApp } from '@/contexts/AppContext'
+import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/hooks/use-toast'
 import BookingDialog from '../BookingDialog'
 import type { Service, Provider } from '@/types/provider'
@@ -14,11 +14,11 @@ interface BookingButtonProps {
 
 export function BookingButton({ service, provider, variant = 'default', size = 'default' }: BookingButtonProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const { state } = useApp()
+  const { user } = useAuth()
   const { toast } = useToast()
 
   const handleBookingClick = () => {
-    if (!state.currentUser) {
+    if (!user) {
       toast({
         title: 'Login Required',
         description: 'Please login to book this service',

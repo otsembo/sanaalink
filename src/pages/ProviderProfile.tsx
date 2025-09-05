@@ -131,7 +131,7 @@ const ProviderProfile = () => {
           const { data: profile } = await supabase
             .from('profiles')
             .select('name')
-            .eq('user_id', review.customer_id)
+            .eq('id', review.customer_id)
             .single();
           
           return {
