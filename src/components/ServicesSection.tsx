@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,7 +40,7 @@ const serviceIcons: { [key: string]: typeof Wrench } = {
 
 const ServicesSection = () => {
   const navigate = useNavigate();
-  const { state } = useApp();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [services, setServices] = useState<Service[]>([]);
@@ -107,7 +107,7 @@ const ServicesSection = () => {
 
 
   const handleContactProvider = (providerId: string) => {
-    if (!state.currentUser) {
+    if (!user) {
       toast({
         title: "Login Required",
         description: "Please login to contact providers.",

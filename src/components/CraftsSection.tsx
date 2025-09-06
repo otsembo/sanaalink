@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -34,7 +34,7 @@ const craftIcons: { [key: string]: typeof Palette } = {
 
 const CraftsSection = () => {
   const navigate = useNavigate();
-  const { state } = useApp();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
@@ -96,7 +96,7 @@ const CraftsSection = () => {
   }, [toast]);
 
   const handleOrderProduct = (product: Product) => {
-    if (!state.currentUser) {
+    if (!user) {
       toast({
         title: "Login Required",
         description: "Please login to order products.",
@@ -110,7 +110,7 @@ const CraftsSection = () => {
   };
 
   const handleToggleFavorite = (productId: string) => {
-    if (!state.currentUser) {
+    if (!user) {
       toast({
         title: "Login Required",
         description: "Please login to save favorites.",

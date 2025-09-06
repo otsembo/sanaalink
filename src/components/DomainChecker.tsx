@@ -12,7 +12,6 @@ interface DomainSuggestion {
   registerUrl?: string;
 }
 
-
 const DomainChecker = () => {
   const [domainName, setDomainName] = useState('');
   const [isChecking, setIsChecking] = useState(false);
@@ -54,7 +53,7 @@ const DomainChecker = () => {
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Check if your business name is available as a .ke domain and get suggestions for alternatives. 
-              Build your online presence with our integrated website builder.
+              Register your domain to build your online presence.
             </p>
           </div>
 
@@ -101,9 +100,12 @@ const DomainChecker = () => {
           </Card>
 
           {/* Results */}
+          {error && (
+            <p className="text-destructive mb-4">{error}</p>
+          )}
           {results && (
             <div className="grid gap-4 md:grid-cols-2">
-              {results.map((result: any, index: number) => (
+              {results.map((result, index) => (
                 <Card 
                   key={index} 
                   className={`transition-all duration-300 hover:shadow-card ${
@@ -128,16 +130,17 @@ const DomainChecker = () => {
                         </div>
                         <div>
                           <h3 className="font-semibold text-foreground">{result.domain}</h3>
-                          <p className="text-sm text-muted-foreground">{result.price}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {result.available ? 'Available' : 'Taken'}
+                          </p>
                         </div>
                       </div>
-                      
                       <div className="flex items-center space-x-2">
                         <Badge variant={result.available ? 'default' : 'secondary'}>
                           {result.available ? 'Available' : 'Taken'}
                         </Badge>
-                        {result.available && (
-                          <Button size="sm" variant="accent">
+                        {result.available && result.registerUrl && (
+                          <Button size="sm" variant="accent" onClick={() => window.open(result.registerUrl, '_blank')}>
                             <ExternalLink className="h-3 w-3 mr-1" />
                             Register
                           </Button>
