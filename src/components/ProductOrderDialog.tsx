@@ -95,7 +95,7 @@ export default function ProductOrderDialog({ isOpen, onClose, product, provider 
           amount: totalAmount,
           status: 'pending',
           provider_id: provider.id,
-          customer_id: state.currentUser.id,
+          customer_id: user.id,
           payment_method: 'mpesa',
           transaction_ref: `ORDER-${orderData.id}-${Date.now()}`,
         })
