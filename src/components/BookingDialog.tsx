@@ -6,7 +6,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -28,7 +28,7 @@ interface BookingDialogProps {
 }
 
 export default function BookingDialog({ isOpen, onClose, service, provider }: BookingDialogProps) {
-  const { state } = useApp();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [phone, setPhone] = useState('');
@@ -36,22 +36,45 @@ export default function BookingDialog({ isOpen, onClose, service, provider }: Bo
   const [timeSlot, setTimeSlot] = useState('');
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
 
-  // Generate available time slots (simplified for now)
+  // Generate available time slots based on provider availability settings
   useEffect(() => {
-    if (date) {
-      // Generate default time slots (9 AM to 5 PM, 1-hour intervals)
-      const slots = [];
-      for (let hour = 9; hour < 17; hour++) {
-        const timeString = `${hour.toString().padStart(2, '0')}:00`;
-        slots.push(timeString);
+    const fetchSlots = async () => {
+      if (!date) { setAvailableSlots([]); return; }
+      try {
+        const days: Array<'sunday'|'monday'|'tuesday'|'wednesday'|'thursday'|'friday'|'saturday'> = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+        const weekday = days[date.getDay()];
+        const { data, error } = await supabase
+          .from('availability_settings')
+          .select('*')
+          .eq('provider_id', provider.id)
+          .eq('weekday', weekday)
+          .maybeSingle();
+        if (error) throw error;
+        if (!data || !data.is_available) { setAvailableSlots([]); setTimeSlot(''); return; }
+        const slots: string[] = [];
+        const [startHour, startMin] = (data.start_time as string).split(':').map(Number);
+        const [endHour, endMin] = (data.end_time as string).split(':').map(Number);
+        const start = new Date(date);
+        start.setHours(startHour, startMin, 0, 0);
+        const end = new Date(date);
+        end.setHours(endHour, endMin, 0, 0);
+        for (let t = new Date(start); t < end; t.setHours(t.getHours() + 1)) {
+          if (new Date() > t) continue; // skip past times when same day
+          slots.push(`${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')}`);
+        }
+        setAvailableSlots(slots);
+        setTimeSlot('');
+      } catch (e) {
+        console.error('Error fetching availability slots', e);
+        setAvailableSlots([]);
+        setTimeSlot('');
       }
-      setAvailableSlots(slots);
-      setTimeSlot(''); // Reset selected time slot
-    }
-  }, [date]);
+    };
+    fetchSlots();
+  }, [date, provider.id]);
 
   const handleBookService = async () => {
-    if (!state.currentUser) {
+    if (!user) {
       toast({
         title: "Login Required",
         description: "Please login to book a service.",
@@ -81,7 +104,7 @@ export default function BookingDialog({ isOpen, onClose, service, provider }: Bo
       const { data: bookingData, error: bookingError } = await supabase
         .from('bookings')
         .insert({
-          customer_id: state.currentUser.id,
+          customer_id: user.id,
           provider_id: provider.id,
           service_id: service.id,
           booking_date: bookingDate.toISOString(),
@@ -109,7 +132,7 @@ export default function BookingDialog({ isOpen, onClose, service, provider }: Bo
           amount: service.price,
           status: 'pending',
           provider_id: provider.id,
-          customer_id: state.currentUser.id,
+          customer_id: user.id,
           payment_method: 'mpesa',
           transaction_ref: `${bookingData.id}-${Date.now()}`,
         })

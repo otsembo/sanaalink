@@ -1,1 +1,4 @@
 project_id = "thoxvolmqzelyjqpwtjl"
+
+[functions.whmcs-domain]
+verify_jwt = false

@@ -4,32 +4,43 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Search, Check, X, Globe, ExternalLink } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface DomainSuggestion {
+  domain: string;
+  available: boolean;
+  registerUrl?: string;
+}
+
 
 const DomainChecker = () => {
   const [domainName, setDomainName] = useState('');
   const [isChecking, setIsChecking] = useState(false);
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState<DomainSuggestion[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleCheck = async () => {
     if (!domainName.trim()) return;
-    
     setIsChecking(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      const baseName = domainName.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const suggestions = [
-        { domain: `${baseName}.co.ke`, available: Math.random() > 0.3, price: 'KSh 2,000/year' },
-        { domain: `${baseName}.ke`, available: Math.random() > 0.7, price: 'KSh 3,500/year' },
-        { domain: `${baseName}.or.ke`, available: Math.random() > 0.5, price: 'KSh 1,500/year' },
-        { domain: `${baseName}.com`, available: Math.random() > 0.4, price: 'KSh 1,800/year' },
-        { domain: `${baseName}.org`, available: Math.random() > 0.6, price: 'KSh 1,600/year' },
-        { domain: `${baseName}ke.com`, available: true, price: 'KSh 1,800/year' },
-      ];
-      
-      setResults(suggestions);
+    setError(null);
+
+    try {
+      const baseName = domainName.toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '');
+      const { data, error } = await supabase.functions.invoke('whmcs-domain', {
+        body: {
+          name: baseName,
+          tlds: ['co.ke','ke','or.ke','com','org']
+        }
+      });
+      if (error) throw error;
+      setResults((data as any)?.suggestions || []);
+    } catch (e: any) {
+      console.error('Domain check failed', e);
+      setError(e?.message || 'Failed to check domain availability');
+      setResults(null);
+    } finally {
       setIsChecking(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -143,13 +154,10 @@ const DomainChecker = () => {
           {results && (
             <Card className="mt-8 bg-hero-gradient text-white border-0">
               <CardContent className="p-6 text-center">
-                <h3 className="text-xl font-bold mb-2">Ready to Build Your Website?</h3>
+                <h3 className="text-xl font-bold mb-2">Ready to Register?</h3>
                 <p className="mb-4 opacity-90">
-                  Once you register your domain, use our drag-and-drop website builder to create a professional site in minutes.
+                  Click Register on an available domain to complete purchase in our WHMCS portal.
                 </p>
-                <Button variant="secondary" className="text-foreground">
-                  Launch Website Builder
-                </Button>
               </CardContent>
             </Card>
           )}
