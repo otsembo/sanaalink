@@ -86,6 +86,8 @@ serve(async (req) => {
     const stkData = await stkResponse.json()
 
     if (stkData.ResponseCode === '0') {
+      console.log(`STK Push successful for reference: ${reference}`)
+      
       // For demo purposes, we'll simulate a successful payment after 10 seconds
       setTimeout(async () => {
         try {
@@ -94,8 +96,10 @@ serve(async (req) => {
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
           )
 
+          console.log(`Processing payment completion for reference: ${reference}`)
+          
           // Update payment status to completed (simulating successful payment)
-          await supabase
+          const { data: paymentData, error: paymentError } = await supabase
             .from('payments')
             .update({ 
               status: 'completed',
@@ -103,10 +107,67 @@ serve(async (req) => {
               updated_at: new Date().toISOString()
             })
             .eq('transaction_ref', reference)
+            .select()
+
+          if (paymentError) {
+            console.error('Error updating payment status:', paymentError)
+            return
+          }
+
+          console.log(`Payment updated successfully:`, paymentData)
+
+          // Update the related booking status if it exists
+          if (paymentData && paymentData.length > 0) {
+            const payment = paymentData[0]
+            if (payment.booking_id) {
+              const { error: bookingError } = await supabase
+                .from('bookings')
+                .update({ 
+                  payment_status: 'completed',
+                  status: 'confirmed',
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', payment.booking_id)
+
+              if (bookingError) {
+                console.error('Error updating booking status:', bookingError)
+              } else {
+                console.log(`Booking ${payment.booking_id} confirmed successfully`)
+              }
+            }
+
+            // Update order status if this is for an order
+            const { data: orders } = await supabase
+              .from('orders')
+              .select('id')
+              .eq('customer_id', payment.customer_id)
+              .eq('total_amount', payment.amount)
+              .eq('payment_status', 'pending')
+              .limit(1)
+
+            if (orders && orders.length > 0) {
+              const { error: orderError } = await supabase
+                .from('orders')
+                .update({ 
+                  payment_status: 'completed',
+                  status: 'processing',
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', orders[0].id)
+
+              if (orderError) {
+                console.error('Error updating order status:', orderError)
+              } else {
+                console.log(`Order ${orders[0].id} confirmed successfully`)
+              }
+            }
+          }
         } catch (error) {
-          console.error('Error updating payment status:', error)
+          console.error('Error processing payment completion:', error)
         }
       }, 10000) // Simulate 10 second delay for payment processing
+    } else {
+      console.log(`STK Push failed for reference: ${reference}, Response:`, stkData)
     }
 
     return new Response(JSON.stringify(stkData), {
